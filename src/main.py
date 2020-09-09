@@ -22,14 +22,13 @@ if run_mode == 'a' or run_mode == 'all':
     x = np.arange(0, 1, 0.01)
     y = np.arange(0, 1, 0.01)
 
-    # Randomly generated meshgrid, NOT SURE IF NECESSARY?
-    x_rand = np.sort(np.random.uniform(0.0, 1.0, n_a))
-    y_rand = np.sort(np.random.uniform(0.0, 1.0, n_a))
+    # Randomly generated meshgrid, TODO: test both maybe?
+    x = np.sort(np.random.uniform(0.0, 1.0, n_a))
+    y = np.sort(np.random.uniform(0.0, 1.0, n_a))
 
     x, y = np.meshgrid(x, y)
-    x_rand, y_rand = np.meshgrid(x_rand, y_rand)
 
-    z = franke_function(x_rand, y_rand)
+    z = franke_function(x, y)
 
     # Adding random noise
     z = z + 0.025 * np.random.randn(20, 20)

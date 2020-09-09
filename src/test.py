@@ -5,6 +5,9 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 from random import random, seed
 
+a = np.arange(6)
+print(a.reshape([-1,1]))
+
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 

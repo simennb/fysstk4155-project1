@@ -26,17 +26,23 @@ def R2(y_data, y_model):
     return 1 - np.sum((y_data - y_model) ** 2) / np.sum((y_data - np.mean(y_data)) ** 2)
 
 
-def generate_polynomial(n, p):
+def generate_polynomial(x, y, p):
     '''
-    :param n:
+    :param x:
+    :param y:
     :param p:
     :return:
     '''
-    X = np.zeros((len(x), p))
+    l = np.sum(np.range(p+2))  # Number of terms in combined polynomial
+    X = np.ones((len(x), l))
 
-    X[:, 0] = 1
-    X[:, 1] = x
-    X[:, 2] = x ** 2
+    j = 0  # Double check, but 99.99% sure it works as intended
+    for i in range(1, p + 1):
+        j = j + i - 1
+        for k in range(i + 1):
+                X[:, i + j + k] = x ** (i - k) * y ** k
+
+    return X
 
 ###########################################################
 ################### Plotting functions ####################

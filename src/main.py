@@ -1,5 +1,6 @@
 from functions import *
 import regression_methods as reg
+import resampling_methods as res
 import os
 import sys
 import numpy as np
@@ -50,7 +51,7 @@ if data == 'franke':
     z_mesh = franke_function(x_mesh, y_mesh)
 
     # Adding random noise
-    z_mesh = z_mesh + 0.025 * np.random.randn(n_a, n_a)
+#    z_mesh = z_mesh + 0.025 * np.random.randn(n_a, n_a)
 
     # Ravel!? YES
     x_ravel = np.ravel(x_mesh)
@@ -63,58 +64,34 @@ if data == 'franke':
 
 if run_mode == 'a' or run_mode == 'all_f':
     # Splitting into train and test data
-#    X_train, X_test, z_train, z_test = split_data(X, z_ravel, test_size=0.2)
+    X_train, X_test, z_train, z_test = split_data(X, z_ravel, test_size=0.2)
     #    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
     # TODO: check
-    X_train, X_test, z_train, z_test = X, X, z_ravel, z_ravel
+#    X_train, X_test, z_train, z_test = X, X, z_ravel, z_ravel
 
     # Scaling the data
     scaler = StandardScaler()
     scaler.fit(X_train)
-    X_train_scaled = scaler.transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    #X_train_scaled = scaler.transform(X_train)
+    #X_test_scaled = scaler.transform(X_test)
+    X_train_scaled = X_train  # TODO ONLY FOR TEST PURPOSES
+    X_test_scaled = X_test
+
 
     # Ordinary Least Squares
     OLS = reg.OrdinaryLeastSquares()
     betaOLS = OLS.fit(X_train_scaled, z_train)
     ztildeOLS = OLS.predict(X_test_scaled)
 
-    betaOLS = OLS.fit(X_train, z_train)
-    ztildeOLS = OLS.predict(X_test)
+    #betaOLS = OLS.fit(X_train, z_train)
+    #ztildeOLS = OLS.predict(X_test)
 
     # R2, MSE
     # TODO: Print both properly, make function
     print_MSE_R2(z_test, ztildeOLS, 'test', 'OLS')
 
 
-    print(z_mesh.shape, ztildeOLS.shape)
-
-    for i in range(100):
-        z_mesh[i, :] = ztildeOLS[i*99:i*99+100]
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-
-    # Plot the surface.
-
-
-    surf = ax.plot_surface(x, y, z_mesh, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
-
-    # Customize the z axis.
-    ax.set_zlim(-0.10, 1.40)
-    ax.zaxis.set_major_locator(LinearLocator(10))
-    ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-
-    # Add a color bar which maps values to colors.
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-
-    plt.show()
-
-
 if run_mode == 'b' or run_mode == 'all_f':
-    pass
-
     # Splitting into train and test data
     X_train, X_test, z_train, z_test = split_data(X, z_ravel, test_size=0.2)
     #    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
@@ -126,8 +103,36 @@ if run_mode == 'b' or run_mode == 'all_f':
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
-    for degree in range(1, p+1):
-        print('p = ', degree)
+    polydegree = np.arange(1, p + 1)
+    trainError = np.zeros(len(range(1, p + 1)))
+    testError = np.zeros(len(range(1, p + 1)))
+    for degree in range(1, p + 1):
+        n_poly = polynom_N_terms(degree)
+        print('p = ', degree, n_poly)
+        X_train_new = X_train_scaled[:, 0:n_poly]
+        X_test_new = X_test_scaled[:, 0:n_poly]
+
+
+        # Bootstrap
+        OLS = reg.OrdinaryLeastSquares()
+        bs = res.Bootstrap(X_train_new, X_test_new, z_train, z_test, OLS, [mean_squared_error])
+        mean_OLS, var_OLS = bs.compute(100, 10)
+        print(mean_OLS, var_OLS)
+
+
+        OLS = reg.OrdinaryLeastSquares()
+        betaOLS = OLS.fit(X_train_new, z_train)
+        z_trainOLS = OLS.predict(X_train_new)
+        z_testOLS = OLS.predict(X_test_new)
+
+        #######
+        trainError[degree-1] = mean_squared_error(z_train, z_trainOLS)
+        testError[degree-1] = mean_squared_error(z_test, z_testOLS)
+
+    fig = plt.figure()
+    plt.plot(polydegree, trainError)
+    plt.plot(polydegree, testError)
+    plt.show()
 
 
 if run_mode == 'c' or run_mode == 'all_f':

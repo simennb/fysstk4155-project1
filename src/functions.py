@@ -33,7 +33,7 @@ def generate_polynomial(x, y, p):
     :param p:
     :return:
     """
-    l = np.sum(np.arange(p+2))  # Number of terms in combined polynomial
+    l = polynom_N_terms(p)  # Number of terms in combined polynomial
     X = np.ones((len(x), l))
 
     j = 0  # Double check, but 99.99% sure it works as intended
@@ -43,6 +43,14 @@ def generate_polynomial(x, y, p):
             X[:, i + j + k] = x ** (i - k) * y ** k
 
     return X
+
+def polynom_N_terms(p):
+    """
+    Returns the amount of terms the polynomial of degree p given by generate_polynomial
+    :param p: polynomial degree
+    :return:
+    """
+    return np.sum(np.arange(p+2))
 
 
 def split_data(X, y, test_size=0.25):

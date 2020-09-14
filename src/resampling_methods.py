@@ -2,11 +2,57 @@ import numpy as np
 
 
 class Bootstrap:
-    def __init__(self):
-        pass
+    def __init__(self, X_train, X_test, y_train, y_test, reg_obj, stat):
+        """
+        :param X_init:
+        :param y_init:
+        :param X_test:
+        :param y_test:
+        :param reg_obj:
+        :param stat: list of functions to compute some statistic [func1, func2]
+        """
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test = y_test
+        self.reg = reg_obj
+        self.stat = stat
+        self.N_stat = len(self.stat)
+
+    def compute(self, N_bs, N_resamples):
+        statistic = np.zeros((N_resamples, self.N_stat))
+
+        for i in range(N_resamples):
+            X_new, y_new = self.resample(N_bs)
+            self.reg.fit(X_new, y_new)
+            y_predict = self.reg.predict(self.X_test)
+
+            for j in range(self.N_stat):
+                statistic[i, j] = self.stat[j](y_predict, self.y_test)
+
+        mean_, var_ = self.compute_mean_variance(statistic)
+
+        return mean_, var_
 
 
+    def resample(self, N_bs):
+        sample_ind = np.random.randint(0, len(self.X_train), N_bs)
+        X_new = self.X_train[sample_ind]
+        y_new = self.y_train[sample_ind]
 
+        return X_new, y_new
+
+    def compute_mean_variance(self, statistic):
+        mean_ = np.zeros(self.N_stat)
+        var_ = np.zeros(self.N_stat)
+        for i in range(self.N_stat):
+            mean_[i] = np.average(statistic[:, i])
+            var_[i] = np.var(statistic[:, i])
+
+        return mean_, var_
+
+
+'''
 from numpy import *
 from numpy.random import randint, randn
 from time import time
@@ -48,7 +94,7 @@ plt.axis([99.5, 100.6, 0, 3.0])
 plt.grid(True)
 
 plt.show()
-
+'''
 
 class CrossValidation:
     def __init__(self):

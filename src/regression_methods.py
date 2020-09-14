@@ -1,5 +1,5 @@
 import numpy as np
-
+from functions import *
 
 class OrdinaryLeastSquares:
     def __init__(self):
@@ -7,7 +7,9 @@ class OrdinaryLeastSquares:
         self.ytilde = None
 
     def fit(self, X, y):
-        self.beta = np.linalg.inv(X.T @ X) @ X.T @ y
+        self.beta = invert_SVD(X.T @ X) @ X.T @ y
+#        self.beta = SVDinv(X.T @ X) @ X.T @ y
+#        self.beta = np.linalg.inv(X.T @ X) @ X.T @ y
         return self.beta
 
     def predict(self, X):

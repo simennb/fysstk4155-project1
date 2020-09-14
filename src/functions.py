@@ -10,9 +10,9 @@ def franke_function(x, y):
     :param y:
     :return:
     """
-    term1 = 0.75*np.exp(-(0.25*(9*x-2)**2) - 0.25*((9*y-2)**2))
+    term1 = 0.75*np.exp(-0.25*(9*x-2)**2 - 0.25*((9*y-2)**2))
     term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
-    term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
+    term3 = 0.5*np.exp(-0.25*(9*x-7)**2 - 0.25*((9*y-3)**2))
     term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
     return term1 + term2 + term3 + term4
 
@@ -22,7 +22,7 @@ def mean_squared_error(y_data, y_model):
     return np.sum((y_data-y_model)**2)/n
 
 
-def R2(y_data, y_model):
+def calculate_R2(y_data, y_model):
     return 1 - np.sum((y_data - y_model) ** 2) / np.sum((y_data - np.mean(y_data)) ** 2)
 
 
@@ -70,9 +70,63 @@ def split_data(X, y, test_size=0.25):
     return X_train, X_test, y_train, y_test
 
 
+def invert_SVD(X):
+    """
+    Computing the pseudo-inverse of X: X^-1 = V s^-1 UT
+    :param X: input matrix
+    :return: pseudo inverse of input matrix X
+    """
+    U, s, VT = np.linalg.svd(X)
+    inv_sigma = np.zeros(len(s))
+    inv_sigma[s != 0] = 1/s[s != 0]  # setting every non-zero element to 1/s[i]
+    V = VT.T
+    UT = U.T
+    return V @ np.diag(inv_sigma) @ UT
+
+
+# TODO: remove
+def SVDinv(A):
+    ''' Takes as input a numpy matrix A and returns inv(A) based on singular value decomposition (SVD).
+    SVD is numerically more stable than the inversion algorithms provided by
+    numpy and scipy.linalg at the cost of being slower.
+    '''
+    U, s, VT = np.linalg.svd(A)
+#    print('test U')
+#    print( (np.transpose(U) @ U - U @np.transpose(U)))
+#    print('test VT')
+#    print( (np.transpose(VT) @ VT - VT @np.transpose(VT)))
+#    print(U)
+ #   print(s)
+  #  print(VT)
+
+    print('meow')
+    D = np.zeros((len(U),len(VT)))
+    for i in range(0,len(VT)):
+        D[i,i]=s[i]
+    UT = np.transpose(U); V = np.transpose(VT); invD = np.linalg.inv(D)
+    return np.matmul(V,np.matmul(invD,UT))
+
 ###########################################################
 ################### Plotting functions ####################
 ###########################################################
+
+
+def print_MSE_R2(y_data, y_model, data_str, method):
+    """
+    :param y_data:
+    :param y_model:
+    :param data_str: 'train', 'test'
+    :param method: 'OLS', 'RIDGE'
+    :return:
+    """
+    MSE = mean_squared_error(y_data, y_model)
+    R2 = calculate_R2(y_data, y_model)
+
+    data_set = {'train': 'Training', 'test': 'Test'}
+    print()  # Newline for readability
+    print('%s MSE for %s: %.6f' %(data_set[data_str], method, MSE))
+    print('%s R2 for %s: %.6f' %(data_set[data_str], method, R2))
+    return
 
 
 if __name__ == '__main__':

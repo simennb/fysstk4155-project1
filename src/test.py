@@ -31,7 +31,7 @@ def FrankeFunction(x,y):
 
 z = FrankeFunction(x, y)
 np.random.seed(3155)
-z = z+0.05*np.random.randn(n, n)
+#z = z+0.05*np.random.randn(n, n)
 
 
 # Plot the surface.

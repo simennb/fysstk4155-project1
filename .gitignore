@@ -1,3 +1,4 @@
+*.cpython-37.pyc
 *.pyc
 # tex files:
 *.log

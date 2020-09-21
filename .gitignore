@@ -20,3 +20,5 @@
 Trash
 # doconce:
 .*_html_file_collection
+
+src/__pycache__/*

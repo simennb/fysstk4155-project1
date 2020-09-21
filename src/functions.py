@@ -1,5 +1,9 @@
 import os
 import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 ###########################################################
 
@@ -44,6 +48,7 @@ def generate_polynomial(x, y, p):
 
     return X
 
+
 def polynom_N_terms(p):
     """
     Returns the amount of terms the polynomial of degree p given by generate_polynomial
@@ -61,7 +66,7 @@ def split_data(X, y, test_size=0.25):
     :return:
     """
     N = len(y)
-    i_split = int((1-test_size)*N-1)
+    i_split = int((1-test_size)*N)
 
     index = np.arange(N)
     np.random.shuffle(index)
@@ -78,6 +83,14 @@ def split_data(X, y, test_size=0.25):
     return X_train, X_test, y_train, y_test
 
 
+def scale_X(X):
+    X_temp = X[:,1:]  # leaving out the intercept
+    X_temp -= np.mean(X)
+    X[:, 1:] = X_temp
+
+    return X
+
+
 def invert_SVD(X):
     """
     Computing the pseudo-inverse of X: X^-1 = V s^-1 UT
@@ -88,11 +101,11 @@ def invert_SVD(X):
     inv_sigma = np.zeros(len(s))
     inv_sigma[s != 0] = 1/s[s != 0]  # setting every non-zero element to 1/s[i]
     V = VT.T
-    UT = U.T
-    return V @ np.diag(inv_sigma) @ UT
+
+    return V @ np.diag(inv_sigma) @ U.T
 
 
-# TODO: remove
+# TODO: remove, from mortens code
 def SVDinv(A):
     ''' Takes as input a numpy matrix A and returns inv(A) based on singular value decomposition (SVD).
     SVD is numerically more stable than the inversion algorithms provided by
@@ -136,6 +149,17 @@ def print_MSE_R2(y_data, y_model, data_str, method):
     print('%s R2 for %s: %.6f' %(data_set[data_str], method, R2))
     return
 
+
+def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise):
+
+    fig = plt.figure()
+    plt.plot(polydegree, train_MSE, label='Train')
+    plt.plot(polydegree, test_MSE, label='Test')
+    plt.legend()
+    plt.yscale('log')
+    plt.grid('on')
+    plt.title('N = %d, test size = %.2f, noise = %.2f' %(n_a, test_size, noise))
+#    plt.ylim([0, 0.025])
 
 if __name__ == '__main__':
     pass

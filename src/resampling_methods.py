@@ -34,7 +34,6 @@ class Bootstrap:
 
         return mean_, var_
 
-
     def resample(self, N_bs):
         sample_ind = np.random.randint(0, len(self.X_train), N_bs)
         X_new = self.X_train[sample_ind]

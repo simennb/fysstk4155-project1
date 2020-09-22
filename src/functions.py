@@ -84,7 +84,13 @@ def split_data(X, y, test_size=0.25):
 
 
 def scale_X(X):
-    X_temp = X[:,1:]  # leaving out the intercept
+    """
+    Function for scaling X by subtracting the mean.
+    Alternative to the skl StandardScaler to make sure intercept row is not set to 0
+    :param X:
+    :return:
+    """
+    X_temp = X[:, 1:]  # leaving out the intercept
     X_temp -= np.mean(X)
     X[:, 1:] = X_temp
 
@@ -112,15 +118,7 @@ def SVDinv(A):
     numpy and scipy.linalg at the cost of being slower.
     '''
     U, s, VT = np.linalg.svd(A)
-#    print('test U')
-#    print( (np.transpose(U) @ U - U @np.transpose(U)))
-#    print('test VT')
-#    print( (np.transpose(VT) @ VT - VT @np.transpose(VT)))
-#    print(U)
- #   print(s)
-  #  print(VT)
 
-    print('meow')
     D = np.zeros((len(U),len(VT)))
     for i in range(0,len(VT)):
         D[i,i]=s[i]
@@ -128,7 +126,7 @@ def SVDinv(A):
     return np.matmul(V,np.matmul(invD,UT))
 
 ###########################################################
-################### Plotting functions ####################
+############# Plotting and printing functions #############
 ###########################################################
 
 
@@ -150,16 +148,36 @@ def print_MSE_R2(y_data, y_model, data_str, method):
     return
 
 
-def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise):
-
+def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample=None):
     fig = plt.figure()
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
     plt.legend()
     plt.yscale('log')
     plt.grid('on')
-    plt.title('N = %d, test size = %.2f, noise = %.2f' %(n_a, test_size, noise))
+    if resample is not None:
+        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a, test_size, noise))
+        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d_%s.png' % (task, n_a, resample))
+    else:
+        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a, test_size, noise))
+        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a))
 #    plt.ylim([0, 0.025])
 
+    # TODO: add more sophisticated filename - figure out what variation we need plot wise
+
+
+def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise, OLSmethod):
+    fig = plt.figure()
+    plt.plot(polydegree, train_MSE, label='Train')
+    plt.plot(polydegree, test_MSE, label='Test')
+    plt.legend()
+    plt.yscale('log')
+    plt.grid('on')
+    plt.title('N = %d, test size = %.2f, noise = %.2f, method=%d' %(n_a, test_size, noise, OLSmethod))
+#    plt.ylim([0, 0.025])
+    plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
+
+
 if __name__ == '__main__':
+    # TODO: make it plot the franke function
     pass

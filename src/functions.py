@@ -153,14 +153,14 @@ def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, 
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
     plt.legend()
-    plt.yscale('log')
+#    plt.yscale('log')
     plt.grid('on')
     if resample is not None:
-        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a, test_size, noise))
-        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d_%s.png' % (task, n_a, resample))
+        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a*n_a, test_size, noise))
+        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d_%s.png' % (task, n_a*n_a, resample))
     else:
-        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a, test_size, noise))
-        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a))
+        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a*n_a, test_size, noise))
+        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
 #    plt.ylim([0, 0.025])
 
     # TODO: add more sophisticated filename - figure out what variation we need plot wise
@@ -171,13 +171,25 @@ def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
     plt.legend()
-    plt.yscale('log')
+#    plt.yscale('log')
     plt.grid('on')
-    plt.title('N = %d, test size = %.2f, noise = %.2f, method=%d' %(n_a, test_size, noise, OLSmethod))
+    plt.title('N = %d, test size = %.2f, noise = %.2f, method=%d' % (n_a*n_a, test_size, noise, OLSmethod))
 #    plt.ylim([0, 0.025])
     plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
 
 
+def plot_bias_variance(polydegree, error, bias, variance):
+    print(bias)
+    fig = plt.figure()
+    plt.plot(polydegree, error, label='Error')
+    plt.plot(polydegree, bias, label='bias')
+    plt.plot(polydegree, variance, label='Variance')
+    plt.grid('on')
+    plt.legend()
+#    plt.yscale('log')
+    plt.show()
+
+
 if __name__ == '__main__':
-    # TODO: make it plot the franke function
+    # TODO: make it plot the franke function?
     pass

@@ -1,5 +1,5 @@
 import numpy as np
-
+from sklearn.utils import resample
 
 class Bootstrap:
     def __init__(self, X_train, X_test, y_train, y_test, reg_obj, stat):
@@ -9,7 +9,7 @@ class Bootstrap:
         :param X_test:
         :param y_test:
         :param reg_obj:
-        :param stat: list of functions to compute some statistic [func1, func2]
+#        :param stat: function to compute some statistic
         """
         self.X_train = X_train
         self.X_test = X_test
@@ -17,22 +17,34 @@ class Bootstrap:
         self.y_test = y_test
         self.reg = reg_obj
         self.stat = stat
-        self.N_stat = len(self.stat)
 
     def compute(self, N_bs, N_resamples):
-        statistic = np.zeros((N_resamples, self.N_stat))
+        y_pred = np.zeros((self.y_test.shape[0], N_resamples))
+        statistic = np.zeros(N_resamples)
+#        bias = np.zeros(N_resamples)
 
         for i in range(N_resamples):
-            X_new, y_new = self.resample(N_bs)
+#            X_new, y_new = self.resample(N_bs)
+#            X_new, y_new = resample(self.X_train, self.y_train, n_samples=N_bs)
+            X_new = self.X_train
+            y_new = self.y_train
+
+#            np.random.normal(0, 0.1, 100)
+
             self.reg.fit(X_new, y_new)
-            y_predict = self.reg.predict(self.X_test)
+            y_pred[:, i] = self.reg.predict(self.X_test)
+            statistic[i] = self.stat(y_pred[:, i], self.y_test)
 
-            for j in range(self.N_stat):
-                statistic[i, j] = self.stat[j](y_predict, self.y_test)
+ #       print(y_pred)
 
-        mean_, var_ = self.compute_mean_variance(statistic)
+        mean_ = np.average(statistic)
+        var_ = np.var(y_pred)
+        bias_ = np.mean((self.y_test - np.mean(y_pred, axis=1, keepdims=True)) ** 2)
+#        print(bias[i])
+#            bias[i] = np.mean((self.y_test - np.mean(y_pred)) ** 2)
+#        bias_ = np.mean(bias)
 
-        return mean_, var_
+        return mean_, var_, bias_
 
     def resample(self, N_bs):
         sample_ind = np.random.randint(0, len(self.X_train), N_bs)
@@ -40,15 +52,6 @@ class Bootstrap:
         y_new = self.y_train[sample_ind]
 
         return X_new, y_new
-
-    def compute_mean_variance(self, statistic):
-        mean_ = np.zeros(self.N_stat)
-        var_ = np.zeros(self.N_stat)
-        for i in range(self.N_stat):
-            mean_[i] = np.average(statistic[:, i])
-            var_[i] = np.var(statistic[:, i])
-
-        return mean_, var_
 
 
 '''

@@ -68,17 +68,20 @@ def split_data(X, y, test_size=0.25):
     N = len(y)
     i_split = int((1-test_size)*N)
 
+#    X_train = np.zeros((i_split, X.shape[1]))
+#    X_test = np.zeros((N-i_split, X_shape[1]))
+
     index = np.arange(N)
     np.random.shuffle(index)
 
     X = X[index]
     y = y[index]
 
-    X_train = X[0:i_split]
-    X_test = X[i_split:]
+    X_train = (X[0:i_split]).copy()
+    X_test = (X[i_split:]).copy()
 
-    y_train = y[0:i_split]
-    y_test = y[i_split:]
+    y_train = (y[0:i_split]).copy()
+    y_test = (y[i_split:]).copy()
 
     return X_train, X_test, y_train, y_test
 
@@ -90,11 +93,12 @@ def scale_X(X):
     :param X:
     :return:
     """
-    X_temp = X[:, 1:]  # leaving out the intercept
-    X_temp -= np.mean(X)
-    X[:, 1:] = X_temp
+    X_new = X.copy()
+    X_temp = (X[:, 1:]).copy()  # leaving out the intercept
+    X_temp -= np.mean(X_temp)
+    X_new[:, 1:] = X_temp[:, :]
 
-    return X
+    return X_new
 
 
 def invert_SVD(X):
@@ -162,6 +166,7 @@ def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, 
         plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a*n_a, test_size, noise))
         plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
 #    plt.ylim([0, 0.025])
+    plt.ylim([0.0, 0.02])
 
     # TODO: add more sophisticated filename - figure out what variation we need plot wise
 
@@ -175,6 +180,7 @@ def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise
     plt.grid('on')
     plt.title('N = %d, test size = %.2f, noise = %.2f, method=%d' % (n_a*n_a, test_size, noise, OLSmethod))
 #    plt.ylim([0, 0.025])
+    plt.ylim([0.0, 0.02])
     plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
 
 
@@ -186,8 +192,23 @@ def plot_bias_variance(polydegree, error, bias, variance):
     plt.plot(polydegree, variance, label='Variance')
     plt.grid('on')
     plt.legend()
+    plt.ylim([0.0, 0.02])
 #    plt.yscale('log')
     plt.show()
+
+
+def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size):
+    fig = plt.figure()
+    plt.plot(polydegree, train_MSE, label='Train')
+    plt.plot(polydegree, test_MSE, label='Test')
+    plt.legend()
+#    plt.yscale('log')
+    plt.grid('on')
+    plt.title('N = %d, test size = %.2f' % (n_a*n_a, test_size))#, noise))
+#        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
+#    plt.ylim([0, 0.025])
+
+    # TODO: add more sophisticated filename - figure out what variation we need plot wise
 
 
 if __name__ == '__main__':

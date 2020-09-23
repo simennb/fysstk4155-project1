@@ -18,33 +18,47 @@ class Bootstrap:
         self.reg = reg_obj
         self.stat = stat
 
-    def compute(self, N_bs, N_resamples):
-        y_pred = np.zeros((self.y_test.shape[0], N_resamples))
-        statistic = np.zeros(N_resamples)
+    def compute(self, N_bootstraps, N_samples=None):
+        y_pred = np.zeros((self.y_test.shape[0], N_bootstraps))
+        y_test = self.y_test.reshape(-1, 1)
+        statistic = np.zeros(N_bootstraps)
 #        bias = np.zeros(N_resamples)
 
-        for i in range(N_resamples):
+        tot_unique = np.zeros(N_bootstraps)
+        n_samp = np.zeros(N_bootstraps)
+        for i in range(N_bootstraps):
 #            X_new, y_new = self.resample(N_bs)
-#            X_new, y_new = resample(self.X_train, self.y_train, n_samples=N_bs)
-            X_new = self.X_train
-            y_new = self.y_train
+            X_new, y_new = resample(self.X_train, self.y_train)#, n_samples=N_bs)
+            tot_unique[i] = len(np.unique(y_new))
+            n_samp[i] = len(X_new[:, -1])
+#            X_new = self.X_train
+#            y_new = self.y_train
 
 #            np.random.normal(0, 0.1, 100)
 
             self.reg.fit(X_new, y_new)
             y_pred[:, i] = self.reg.predict(self.X_test)
-            statistic[i] = self.stat(y_pred[:, i], self.y_test)
+#            statistic[i] = self.stat(y_pred[:, i], y_test)
+
+
+#        error[degree] = np.mean(np.mean((y_test - y_pred) ** 2, axis=1, keepdims=True))
+#        bias[degree] = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True)) ** 2)
+#        variance[degree] = np.mean(np.var(y_pred, axis=1, keepdims=True))
+
+#            print(len(np.unique(y_pred[:, i])))
 
  #       print(y_pred)
+        print('N_samples = %.2f , mean(unique) = %.2f  BS' % (np.mean(n_samp), np.mean(tot_unique)))
 
-        mean_ = np.average(statistic)
-        var_ = np.var(y_pred)
-        bias_ = np.mean((self.y_test - np.mean(y_pred, axis=1, keepdims=True)) ** 2)
+        error = np.mean(np.mean((y_test - y_pred) ** 2, axis=1, keepdims=True))
+        #error = np.mean(statistic)
+        variance = np.mean(np.var(y_pred, axis=1, keepdims=True))
+        bias = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True)) ** 2)
 #        print(bias[i])
 #            bias[i] = np.mean((self.y_test - np.mean(y_pred)) ** 2)
 #        bias_ = np.mean(bias)
 
-        return mean_, var_, bias_
+        return error, variance, bias  # mean_, var_, bias_
 
     def resample(self, N_bs):
         sample_ind = np.random.randint(0, len(self.X_train), N_bs)

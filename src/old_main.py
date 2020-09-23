@@ -10,7 +10,6 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from sklearn.utils import resample
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -81,8 +80,8 @@ if data == 'franke':
 
 if run_mode == 'a' or run_mode == 'all_f':
     # Splitting into train and test data
-#    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)  # TODO: check
-    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
+    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)  # TODO: check
+#    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
 
     # Scaling the data
     X_train_scaled = fun.scale_X(X_train)
@@ -99,8 +98,8 @@ if run_mode == 'a' or run_mode == 'all_f':
 
 
 if run_mode == 'b' or run_mode == 'all_f':
-    N_samples = 169  # number of samples per bootstrap
-    N_bootstraps = 100  # number of resamples
+#    N_bs = 169  # number of samples per bootstrap
+#    N_resamples = 10  # number of resamples
 
     # Splitting into train and test data
     X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)
@@ -122,60 +121,31 @@ if run_mode == 'b' or run_mode == 'all_f':
     OLS = reg.OrdinaryLeastSquares(OLSmethod)
     for degree in range(1, p + 1):
         n_poly = fun.polynom_N_terms(degree)
-        print('p = %2d, np = %3d' % (degree, n_poly))
-
-        X_train_new = np.zeros((len(X_train), n_poly))
-        X_test_new = np.zeros((len(X_test), n_poly))
-
-#        X_train_new[:, :] = X_train_scaled[:, 0:n_poly]
-#        X_test_new[:, :] = X_test_scaled[:, 0:n_poly]
-
-        X_train_new[:, :] = X_train[:, 0:n_poly]
-        X_test_new[:, :] = X_test[:, 0:n_poly]
-
-        X_train_OLS = X_train_scaled[:, 0:n_poly]
-        X_test_OLS = X_test_scaled[:, 0:n_poly]
-
-        # Ordinary Least Squares without Bootstrapping
-        betaOLS = OLS.fit(X_train_OLS, z_train)
-        z_trainOLS = OLS.predict(X_train_OLS)
-        z_testOLS = OLS.predict(X_test_OLS)
-
-        trainError[degree-1] = fun.mean_squared_error(z_train, z_trainOLS)
-        testError[degree-1] = fun.mean_squared_error(z_test, z_testOLS)
+        print('p = %2d, np = %3d' %(degree, n_poly))
+        X_train_new = X_train_scaled[:, 0:n_poly]
+        X_test_new = X_test_scaled[:, 0:n_poly]
 
         # Bootstrap
+        '''
         OLS = reg.OrdinaryLeastSquares()
         bs = res.Bootstrap(X_train_new, X_test_new, z_train, z_test, OLS, fun.mean_squared_error)
-        mean_OLS, var_OLS, bias_OLS = bs.compute(N_bootstraps)
+        mean_OLS, var_OLS, bias_OLS = bs.compute(N_bs, N_resamples)
         bs_mean_OLS[degree-1] = mean_OLS
         bs_var_OLS[degree-1] = var_OLS
 #        print(bias_OLS, type(bias_OLS))
         bs_bias_OLS[degree-1] = bias_OLS
 #        print(mean_OLS, var_OLS, bias_OLS)
-
         '''
-        for i in range(N_bootstraps):
-            X_train_BS, z_train_BS = resample(X_train_new, z_train)
-            # Scaling the data
-            X_train_BS = fun.scale_X(X_train_BS)
-            if degree == 10 and i == 33:
-                print(z_train_BS)
 
-            betaBS = OLS.fit(X_train_BS, z_train_BS)
-            z_fitBS = OLS.predict(X_train_BS)
-            z_predBS = OLS.predict(X_test_new)
+        # Test
+        betaOLS = OLS.fit(X_train_new, z_train)
+        z_trainOLS = OLS.predict(X_train_new)
+        z_testOLS = OLS.predict(X_test_new)
 
-            a = (z_test - np.mean(z_predBS)) ** 2
-#            print(a)
-            if degree == 10 and i == 33:
-                print(i, z_predBS)
-                print(i, z_fitBS)
-                print(np.mean((z_train_BS - z_fitBS)**2))
-            bs_mean_OLS[degree-1] += np.mean((z_test - z_predBS) ** 2) / N_bootstraps
-            bs_var_OLS[degree-1] += np.var(z_predBS) / len(z_predBS)
-            bs_bias_OLS[degree-1] += np.mean((z_test - np.mean(z_predBS)) ** 2) / N_bootstraps
-            '''
+        #######
+        trainError[degree-1] = fun.mean_squared_error(z_train, z_trainOLS)
+        testError[degree-1] = fun.mean_squared_error(z_test, z_testOLS)
+
     '''
     fig = plt.figure()
     plt.plot(polydegree, trainError, label='Train')
@@ -188,15 +158,15 @@ if run_mode == 'b' or run_mode == 'all_f':
     '''
 
 #    polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample = None)
-    fun.plot_MSE_train_test(polydegree, trainError, bs_mean_OLS, n_franke, test_size, noise,
-                            fig_path, run_mode, 'Bootstrap')
+#    fun.plot_MSE_train_test(polydegree, trainError, bs_mean_OLS, n_franke, test_size, noise,
+#                            fig_path, run_mode, 'Bootstrap')
 
     fun.plot_MSE_train_test(polydegree, trainError, testError, n_franke, test_size, noise,
                             fig_path, run_mode)
 
 #    fun.plot_MSE_test_OLS_fit(polydegree, trainError, testError, n_franke, test_size, noise, OLSmethod)
 
-    fun.plot_bias_variance(polydegree, bs_mean_OLS, bs_bias_OLS, bs_var_OLS)
+#    fun.plot_bias_variance(polydegree, bs_mean_OLS, bs_bias_OLS, bs_var_OLS)
 
     plt.show()
 

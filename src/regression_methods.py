@@ -9,6 +9,7 @@ class OrdinaryLeastSquares:
         self.method = method  # for testing fit
 
     def fit(self, X, y):
+
         if self.method == 1:
             self.beta = fun.invert_SVD(X.T @ X) @ X.T @ y  # Method 1
 

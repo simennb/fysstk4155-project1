@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.utils import resample
@@ -29,7 +30,7 @@ data = 'franke' if run_mode in ['a', 'b', 'c', 'd', 'e', 'all_f'] else None
 data = 'terrain' if run_mode in ['f', 'g', 'all_t'] else data
 
 # Common variables for both parts for easy adjusting
-p_dict = {'a': 5, 'b': 10}  # TODO: kinda problematic for all_f/all_t
+p_dict = {'a': 5, 'b': 10, 'c': 10}  # TODO: kinda problematic for all_f/all_t
 test_size = 0.2
 fig_path = '../figures/'
 
@@ -38,6 +39,7 @@ OLSmethod = 5
 if data == 'franke':
     # Creating data set for the Franke function tasks
     np.random.seed(4155)
+#    np.random.seed(4521515)
     n_franke = 13  # number of samples of x/y, so total N is n_franke^2
     N = n_franke**2
     noise = 0.0  # 2
@@ -81,21 +83,32 @@ if data == 'franke':
 
 if run_mode == 'a' or run_mode == 'all_f':
     # Splitting into train and test data
-#    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)  # TODO: check
-    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
+    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)  # TODO: check
+#    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
 
     # Scaling the data
     X_train_scaled = fun.scale_X(X_train)
     X_test_scaled = fun.scale_X(X_test)
+
+    print('Meow ', np.array_equal(X_train_scaled, X_train))
 
     # Ordinary Least Squares
     OLS = reg.OrdinaryLeastSquares()
     betaOLS = OLS.fit(X_train_scaled, z_train)
     ztildeOLS = OLS.predict(X_test_scaled)
 
+    # Confidence interval
+#    conf_int = np.zeros((len(ztildeOLS), 2))
+    beta_varOLS = np.var(betaOLS)
+    conf = 2*np.sqrt(beta_varOLS)  # 95% confidence interval
+#    conf_int[:, 1] = conf
+#    print('95% confidence interval: [%.4f, %.4f]' )
+
     # Printing MSE and R2 score
     # TODO: maybe save results to file?
     fun.print_MSE_R2(z_test, ztildeOLS, 'test', 'OLS')
+    fun.plot_confidence_int(betaOLS, conf, 'OLS', fig_path, run_mode)
+    plt.show()
 
 
 if run_mode == 'b' or run_mode == 'all_f':
@@ -145,7 +158,7 @@ if run_mode == 'b' or run_mode == 'all_f':
         testError[degree-1] = fun.mean_squared_error(z_test, z_testOLS)
 
         # Bootstrap
-        OLS = reg.OrdinaryLeastSquares()
+        OLS = reg.OrdinaryLeastSquares(OLSmethod)
         bs = res.Bootstrap(X_train_new, X_test_new, z_train, z_test, OLS, fun.mean_squared_error)
         mean_OLS, var_OLS, bias_OLS = bs.compute(N_bootstraps)
         bs_mean_OLS[degree-1] = mean_OLS
@@ -203,8 +216,38 @@ if run_mode == 'b' or run_mode == 'all_f':
 
 if run_mode == 'c' or run_mode == 'all_f':
     # TODO 1c dont do bias variance trade off with cross validation unless scikit learn since it takes more work to do by hand
-    # TODO DONT USE TRAIN TEST SPLIT, cross validation does it
-    pass
+    K = 5
+
+    # Scale data
+    X_scaled = fun.scale_X(X)
+
+    OLS = reg.OrdinaryLeastSquares(OLSmethod)
+    CV = res.CrossValidation(X_scaled, z_ravel, OLS, fun.mean_squared_error)
+    error = CV.compute(K)
+
+    print('K-fold cross-validation:')
+    print('K=%d, MSE = %.5f' % (K, error))
+#    for i in range(5):
+#        CV.split(X, y, K, i)
+
+    kfold = KFold(n_splits=K, random_state=None, shuffle=False)
+    MSE_skl = 0
+    for train_inds, test_inds in kfold.split(X):
+        X_train = X_scaled[train_inds]
+        z_train = z_ravel[train_inds]
+
+        X_test = X_scaled[test_inds]
+        z_test = z_ravel[test_inds]
+
+        betaOLS = OLS.fit(X_train, z_train)
+        z_testOLS = OLS.predict(X_test)
+
+        MSE_skl += fun.mean_squared_error(z_test, z_testOLS) / K
+
+    print('K-fold cross-validation SKL:')
+    print('K=%d, MSE = %.5f' % (K, MSE_skl))
+
+
 if run_mode == 'd' or run_mode == 'all_f':
     pass
 if run_mode == 'e' or run_mode == 'all_f':

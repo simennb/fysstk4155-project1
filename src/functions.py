@@ -93,11 +93,29 @@ def scale_X(X):
     :param X:
     :return:
     """
+    # TODO: check if scaling for test should be done with mean computed from train
+#    print(X[0:5, 3])
     X_new = X.copy()
-    X_temp = (X[:, 1:]).copy()  # leaving out the intercept
-    X_temp -= np.mean(X_temp)
-    X_new[:, 1:] = X_temp[:, :]
+    X_new[:, 1:] -= np.mean(X_new[:, 1:], axis=0, keepdims=True)
 
+
+#    X_temp = (X[:, 1:]).copy()  # leaving out the intercept
+#    X_temp -= np.mean(X_temp, axis=0, keepdims=True)
+#    X_new[:, 1:] = X_temp[:, :]
+#    print(X_new[0:5, 3])
+
+    # [0.13255961 0.66424334 0.66424334 0.34695174 0.45311719]
+    # [-0.18519098  0.34649275  0.34649275  0.02920115  0.1353666 ]
+    # Both methods equivalent
+    # [0.13255961 0.66424334 0.66424334 0.34695174 0.45311719]
+    # [-0.18519098  0.34649275  0.34649275  0.02920115  0.1353666 ]
+
+#    print(X[0:5, 3])
+#    X_temp = X[:, 1:]
+#    X_temp -= np.mean(X_temp, axis=0)  # TODO THIS CHANGES X OUTSIDE OF FUNCTION
+#    print('aaaa')
+#    print(X[0:5, 3])
+#    return X
     return X_new
 
 
@@ -210,6 +228,22 @@ def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size):
 
     # TODO: add more sophisticated filename - figure out what variation we need plot wise
 
+
+def plot_confidence_int(beta, conf, method, fig_path, task, fs=14):
+    n = len(beta)
+    fig = plt.figure()
+    plt.errorbar(range(len(beta)), beta, conf)
+    plt.title(r'Confidence intervals for $\beta$, method=%s' % method, fontsize=fs)
+    plt.xlabel(r'$i$', fontsize=fs)
+    plt.ylabel(r'$\beta_i$', fontsize=fs)
+    plt.grid('on')
+
+    plt.savefig(fig_path + 'task_%s/beta_conf_int_n%d_%s.png' % (task, n, method))
+#plt.errorbar(np.linspace(0, len(self.beta), len(self.beta)), self.beta, yerr=twostd_beta)
+#plt.title(r'$\beta$ confidence for %s' % method, fontsize=fs1)
+#plt.xlabel(r'$\beta_j$', fontsize=fs2)
+#plt.savefig('../figures/%s-%s-contour-beta-patch%s.png' % (task, method, patch))
+#plt.tight_layout()
 
 if __name__ == '__main__':
     # TODO: make it plot the franke function?

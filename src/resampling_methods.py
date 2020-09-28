@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.utils import resample
 
+
 class Bootstrap:
     def __init__(self, X_train, X_test, y_train, y_test, reg_obj, stat):
         """
@@ -27,8 +28,8 @@ class Bootstrap:
         tot_unique = np.zeros(N_bootstraps)
         n_samp = np.zeros(N_bootstraps)
         for i in range(N_bootstraps):
-#            X_new, y_new = self.resample(N_bs)
-            X_new, y_new = resample(self.X_train, self.y_train)#, n_samples=N_bs)
+            X_new, y_new = self.resample()
+#            X_new, y_new = resample(self.X_train, self.y_train)#, n_samples=N_bs)
             tot_unique[i] = len(np.unique(y_new))
             n_samp[i] = len(X_new[:, -1])
 #            X_new = self.X_train
@@ -60,10 +61,11 @@ class Bootstrap:
 
         return error, variance, bias  # mean_, var_, bias_
 
-    def resample(self, N_bs):
-        sample_ind = np.random.randint(0, len(self.X_train), N_bs)
-        X_new = self.X_train[sample_ind]
-        y_new = self.y_train[sample_ind]
+    def resample(self):
+        sample_ind = np.random.randint(0, len(self.X_train), len(self.X_train))
+
+        X_new = (self.X_train[sample_ind]).copy()
+        y_new = (self.y_train[sample_ind]).copy()
 
         return X_new, y_new
 
@@ -112,6 +114,80 @@ plt.grid(True)
 plt.show()
 '''
 
+
 class CrossValidation:
-    def __init__(self):
-        pass
+    def __init__(self, X, y, reg_obj, stat):
+        """
+        :param X:
+        :param y:
+        :param reg_obj:
+#        :param stat: function to compute some statistic
+        """
+        self.X = X
+        self.y = y
+        self.reg = reg_obj
+        self.stat = stat
+
+    def compute(self, K, N_samples=None):
+        error = np.zeros(K)
+#        bias = np.zeros(N_resamples)
+
+#        index = np.arange(len(self.X))
+#        np.random.shuffle(index)
+
+#        X = self.X[index]
+#        y = self.y[index]
+        X = self.X.copy()
+        y = self.y.copy()
+
+        for i in range(K):
+            X_train, X_test, y_train, y_test = self.split(X, y, K, i)
+
+            self.reg.fit(X_train, y_train)
+            y_pred = self.reg.predict(X_test)
+            error[i] = np.mean((y_test - y_pred) ** 2)
+
+#            statistic[i] = self.stat(y_pred[:, i], y_test)
+
+
+#        error = np.mean(np.mean((y_test - y_pred) ** 2, axis=1, keepdims=True))
+        #error = np.mean(statistic)
+#        variance = np.mean(np.var(y_pred, axis=1, keepdims=True))
+#        bias = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True)) ** 2)
+#        print(bias[i])
+#            bias[i] = np.mean((self.y_test - np.mean(y_pred)) ** 2)
+#        bias_ = np.mean(bias)
+
+        return np.mean(error)  # , variance, bias  # mean_, var_, bias_
+
+    def split(self, X, y, K, i):
+#        X = np.array(range(53))
+
+ #       i = 4
+
+        N = len(X)
+#        j = i*int(N/K)
+#        l = j + int(N/K)
+        j = int(i*N/K)  # TODO: check
+        l = j + int(N/K)
+
+        print('Split #%d: N: %d, [%d : %d], %d' % (i, N, j, l, l-j))
+
+        indices = np.arange(N)
+        test_indices = indices[j:l]
+        mask = np.ones(N, dtype=bool)
+        mask[test_indices] = False
+#        print(mask)
+        train_indices = indices[mask]
+
+        X_train = X[train_indices]
+        X_test = X[test_indices]
+        print(X_train.shape, X_test.shape)
+#        print(test_indices)
+#        print('train ', X_train)
+#        print('test ', X_test)
+
+        y_train = y[train_indices]
+        y_test = y[test_indices]
+
+        return X_train, X_test, y_train, y_test

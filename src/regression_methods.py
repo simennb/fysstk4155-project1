@@ -34,10 +34,13 @@ class OrdinaryLeastSquares:
 
 class RidgeRegression:
     def __init__(self):
-        pass
+        self.beta = None
+        self.ytilde = None
 
-    def fit(self):
-        pass
+    def fit(self, X, y, lmb):
+        I = np.identity(X.shape[1])
+        self.beta = np.linalg.pinv(X.T @ X + lmb * I) @ X.T @ y
 
-    def predict(self):
-        pass
+    def predict(self, X):
+        ytilde = X @ self.beta
+        return ytilde

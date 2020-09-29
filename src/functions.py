@@ -4,6 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
+from sklearn.preprocessing import StandardScaler
 
 ###########################################################
 
@@ -74,8 +75,8 @@ def split_data(X, y, test_size=0.25):
     index = np.arange(N)
     np.random.shuffle(index)
 
-    X = X[index]
-    y = y[index]
+    X = (X[index]).copy()
+    y = (y[index]).copy()
 
     X_train = (X[0:i_split]).copy()
     X_test = (X[i_split:]).copy()
@@ -86,17 +87,24 @@ def split_data(X, y, test_size=0.25):
     return X_train, X_test, y_train, y_test
 
 
-def scale_X(X):
+def scale_X(X, with_mean=True, with_std=True):
     """
     Function for scaling X by subtracting the mean.
     Alternative to the skl StandardScaler to make sure intercept row is not set to 0
     :param X:
+    :param with_std:
+    :param with_mean:
     :return:
     """
     # TODO: check if scaling for test should be done with mean computed from train
 #    print(X[0:5, 3])
     X_new = X.copy()
-    X_new[:, 1:] -= np.mean(X_new[:, 1:], axis=0, keepdims=True)
+    std = np.std(X_new, axis=0, keepdims=True)
+    if with_mean:
+        X_new[:, 1:] -= np.mean(X_new[:, 1:], axis=0, keepdims=True)
+    if with_std:
+        X_new[:, 1:] /= std[:, 1:]
+
 
 
 #    X_temp = (X[:, 1:]).copy()  # leaving out the intercept
@@ -165,23 +173,25 @@ def print_MSE_R2(y_data, y_model, data_str, method):
 
     data_set = {'train': 'Training', 'test': 'Test'}
     print()  # Newline for readability
-    print('%s MSE for %s: %.6f' %(data_set[data_str], method, MSE))
-    print('%s R2 for %s: %.6f' %(data_set[data_str], method, R2))
+    print('%s MSE for %s: %.6f' % (data_set[data_str], method, MSE))
+    print('%s R2 for %s: %.6f' % (data_set[data_str], method, R2))
     return
 
 
-def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample=None):
+def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample=None, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
     plt.legend()
+    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.ylabel('Mean squared error', fontsize=fs)
 #    plt.yscale('log')
     plt.grid('on')
     if resample is not None:
-        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a*n_a, test_size, noise))
+        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a*n_a, test_size, noise), fontsize=fs)
         plt.savefig(fig_path+'task_%s/MSE_train_test_n%d_%s.png' % (task, n_a*n_a, resample))
     else:
-        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a*n_a, test_size, noise))
+        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a*n_a, test_size, noise), fontsize=fs)
         plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
 #    plt.ylim([0, 0.025])
     plt.ylim([0.0, 0.02])
@@ -189,11 +199,14 @@ def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, 
     # TODO: add more sophisticated filename - figure out what variation we need plot wise
 
 
-def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise, OLSmethod):
+def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise, OLSmethod, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
     plt.legend()
+    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.ylabel('Mean squared error', fontsize=fs)
+    plt.title('MSE for Ordinary Least Squares', fontsize=fs)
 #    plt.yscale('log')
     plt.grid('on')
     plt.title('N = %d, test size = %.2f, noise = %.2f, method=%d' % (n_a*n_a, test_size, noise, OLSmethod))
@@ -202,12 +215,15 @@ def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise
     plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
 
 
-def plot_bias_variance(polydegree, error, bias, variance):
+def plot_bias_variance(polydegree, error, bias, variance, fs=14):
     print(bias)
     fig = plt.figure()
     plt.plot(polydegree, error, label='Error')
     plt.plot(polydegree, bias, label='bias')
     plt.plot(polydegree, variance, label='Variance')
+    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.ylabel('Mean squared error', fontsize=fs)
+    plt.title('Bias variance trade-off', fontsize=fs)
     plt.grid('on')
     plt.legend()
     plt.ylim([0.0, 0.02])
@@ -215,10 +231,12 @@ def plot_bias_variance(polydegree, error, bias, variance):
     plt.show()
 
 
-def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size):
+def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
+    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.ylabel('Mean squared error', fontsize=fs)
     plt.legend()
 #    plt.yscale('log')
     plt.grid('on')

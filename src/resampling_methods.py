@@ -28,7 +28,8 @@ class Bootstrap:
         tot_unique = np.zeros(N_bootstraps)
         n_samp = np.zeros(N_bootstraps)
         for i in range(N_bootstraps):
-            X_new, y_new = self.resample()
+#            print(1)
+            X_new, y_new = self.resample(self.X_train, self.y_train)
 #            X_new, y_new = resample(self.X_train, self.y_train)#, n_samples=N_bs)
             tot_unique[i] = len(np.unique(y_new))
             n_samp[i] = len(X_new[:, -1])
@@ -61,11 +62,11 @@ class Bootstrap:
 
         return error, variance, bias  # mean_, var_, bias_
 
-    def resample(self):
-        sample_ind = np.random.randint(0, len(self.X_train), len(self.X_train))
+    def resample(self, X, y):
+        sample_ind = np.random.randint(0, len(X), len(X))
 
-        X_new = (self.X_train[sample_ind]).copy()
-        y_new = (self.y_train[sample_ind]).copy()
+        X_new = (X[sample_ind]).copy()
+        y_new = (y[sample_ind]).copy()
 
         return X_new, y_new
 
@@ -128,15 +129,17 @@ class CrossValidation:
         self.reg = reg_obj
         self.stat = stat
 
-    def compute(self, K, N_samples=None):
+    def compute(self, K):
         error = np.zeros(K)
-#        bias = np.zeros(N_resamples)
 
+        # TODO: Don't shuffle
+#        index = np.arange(len(self.y))
+#        np.random.shuffle(index)
 #        index = np.arange(len(self.X))
 #        np.random.shuffle(index)
+#        X = (self.X[index]).copy()
+#        y = (self.y[index]).copy()
 
-#        X = self.X[index]
-#        y = self.y[index]
         X = self.X.copy()
         y = self.y.copy()
 
@@ -147,23 +150,11 @@ class CrossValidation:
             y_pred = self.reg.predict(X_test)
             error[i] = np.mean((y_test - y_pred) ** 2)
 
-#            statistic[i] = self.stat(y_pred[:, i], y_test)
-
-
-#        error = np.mean(np.mean((y_test - y_pred) ** 2, axis=1, keepdims=True))
-        #error = np.mean(statistic)
-#        variance = np.mean(np.var(y_pred, axis=1, keepdims=True))
-#        bias = np.mean((y_test - np.mean(y_pred, axis=1, keepdims=True)) ** 2)
-#        print(bias[i])
-#            bias[i] = np.mean((self.y_test - np.mean(y_pred)) ** 2)
-#        bias_ = np.mean(bias)
-
-        return np.mean(error)  # , variance, bias  # mean_, var_, bias_
+        return np.mean(error)
 
     def split(self, X, y, K, i):
-#        X = np.array(range(53))
-
- #       i = 4
+        # TODO: Check behavior compared to SKL kfold.split
+        # TODO: since not every number is neatly divisable with K
 
         N = len(X)
 #        j = i*int(N/K)
@@ -171,13 +162,12 @@ class CrossValidation:
         j = int(i*N/K)  # TODO: check
         l = j + int(N/K)
 
-        print('Split #%d: N: %d, [%d : %d], %d' % (i, N, j, l, l-j))
+#        print('Split #%d: N: %d, [%d : %d], %d' % (i, N, j, l, l-j))
 
         indices = np.arange(N)
         test_indices = indices[j:l]
         mask = np.ones(N, dtype=bool)
         mask[test_indices] = False
-#        print(mask)
         train_indices = indices[mask]
 
         X_train = X[train_indices]

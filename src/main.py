@@ -20,17 +20,23 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 # TODO: sys.argv would be neat, but not sure how to easily swap in pycharm
 print('Input which part of the program to run:')
-print('Franke function: a/b/c/d/e/all_f')
-print('Terrain data: f/g/all_t')
+print('Franke function: a/b/c/d/e')
+print('Terrain data: f/g')
 run_mode = (input('Run mode: ')).lower()
-if run_mode not in ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'all_f', 'all_t']:
+if run_mode not in ['a', 'b', 'c', 'd', 'e', 'f', 'g']:
     sys.exit('Please double check input.')
 
-data = 'franke' if run_mode in ['a', 'b', 'c', 'd', 'e', 'all_f'] else None
-data = 'terrain' if run_mode in ['f', 'g', 'all_t'] else data
+data = 'franke' if run_mode in ['a', 'b', 'c', 'd', 'e'] else None
+data = 'terrain' if run_mode in ['f', 'g'] else data
 
 # Common variables for both parts for easy adjusting
-p_dict = {'a': 5, 'b': 10, 'c': 10}  # TODO: kinda problematic for all_f/all_t
+p_dict = {'a': 5, 'b': 10, 'c': 5, 'd':10,
+          'e': 5, 'f': 10, 'g': 5, 'h':10}
+scale_dict = {'a':[True, True], 'b':[True, True], 'c':[True, True], 'd':[True, True],
+              'e':[True, True], 'f':[True, True], 'g':[True, True], 'h':[True, True]}
+p = p_dict[run_mode]
+scale = scale_dict[run_mode]
+
 test_size = 0.2
 fig_path = '../figures/'
 
@@ -39,20 +45,14 @@ OLSmethod = 5
 if data == 'franke':
     # Creating data set for the Franke function tasks
     np.random.seed(4155)
-#    np.random.seed(4521515)
-    n_franke = 13  # number of samples of x/y, so total N is n_franke^2
-    N = n_franke**2
+    n_franke = 13  # number of samples of x/y
+    N = n_franke**2  # Total number of samples n*2
     noise = 0.0  # 2
     p = p_dict[run_mode]  # degree of polynomial for the task
 
     # Randomly generated meshgrid
-    # TODO: do i randomly draw samples and make meshgrid, or n_f*n_f random sets of (x,y) samples?
     x = np.sort(np.random.uniform(0.0, 1.0, n_franke))
     y = np.sort(np.random.uniform(0.0, 1.0, n_franke))
-    # TODO: is sort even necessary when im not plotting it?
-
-#    x = np.random.uniform(0.0, 1.0, n_franke)
-#    y = np.random.uniform(0.0, 1.0, n_franke)
 
     x_mesh, y_mesh = np.meshgrid(x, y)
     z_mesh = fun.franke_function(x_mesh, y_mesh)
@@ -68,20 +68,10 @@ if data == 'franke':
     # Creating polynomial design matrix
     X = fun.generate_polynomial(x_ravel, y_ravel, p)
 
-    # Alternative approach with n^2 (x,y) pairs
-    '''
-    x_alt = np.random.uniform(0.0, 1.0, n_franke*n_franke)
-    y_alt = np.random.uniform(0.0, 1.0, n_franke*n_franke)
-    a = np.random.randn(5)
-    # TODO: drawing 0-4 random numbers give R2 score of ~0.3-0.4
-#    z_ravel = fun.franke_function(x_alt, y_alt)
-#    X = fun.generate_polynomial(x_alt, y_alt, p)
-    '''
-
     # Plot franke function if task a for example?
 
 
-if run_mode == 'a' or run_mode == 'all_f':
+if run_mode == 'a':
     # Splitting into train and test data
     X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)  # TODO: check
 #    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
@@ -97,22 +87,20 @@ if run_mode == 'a' or run_mode == 'all_f':
     betaOLS = OLS.fit(X_train_scaled, z_train)
     ztildeOLS = OLS.predict(X_test_scaled)
 
-    # Confidence interval
-#    conf_int = np.zeros((len(ztildeOLS), 2))
-    beta_varOLS = np.var(betaOLS)
-    conf = 2*np.sqrt(beta_varOLS)  # 95% confidence interval
-#    conf_int[:, 1] = conf
-#    print('95% confidence interval: [%.4f, %.4f]' )
-
     # Printing MSE and R2 score
     # TODO: maybe save results to file?
     fun.print_MSE_R2(z_test, ztildeOLS, 'test', 'OLS')
+
+    # Confidence interval TODO: fix comments
+    OLS.confidence_interval_beta()#    variance = 1. / (N - p - 1) * np.sum((zr - pred) ** 2)
+    beta_varOLS = np.var(betaOLS)
+    conf = 2*np.sqrt(beta_varOLS)  # 95% confidence interval
     fun.plot_confidence_int(betaOLS, conf, 'OLS', fig_path, run_mode)
     plt.show()
 
 
-if run_mode == 'b' or run_mode == 'all_f':
-    N_samples = 169  # number of samples per bootstrap
+if run_mode == 'b':
+    N_samples = N  # number of samples per bootstrap
     N_bootstraps = 100  # number of resamples
 
     # Splitting into train and test data
@@ -120,8 +108,8 @@ if run_mode == 'b' or run_mode == 'all_f':
 #    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=test_size)
 
     # Scaling the data
-    X_train_scaled = fun.scale_X(X_train)
-    X_test_scaled = fun.scale_X(X_test)
+    X_train_scaled = fun.scale_X(X_train, with_std=False)
+    X_test_scaled = fun.scale_X(X_test, with_std=False)
 #    X_train_scaled = X_train
 #    X_test_scaled = X_test
 
@@ -137,14 +125,19 @@ if run_mode == 'b' or run_mode == 'all_f':
         n_poly = fun.polynom_N_terms(degree)
         print('p = %2d, np = %3d' % (degree, n_poly))
 
-        X_train_new = np.zeros((len(X_train), n_poly))
-        X_test_new = np.zeros((len(X_test), n_poly))
+        X_train_bs = np.zeros((len(X_train), n_poly))
+        X_test_bs = np.zeros((len(X_test), n_poly))
+        X_train_OLS = np.zeros((len(X_train), n_poly))
+        X_test_OLS = np.zeros((len(X_test), n_poly))
 
 #        X_train_new[:, :] = X_train_scaled[:, 0:n_poly]
 #        X_test_new[:, :] = X_test_scaled[:, 0:n_poly]
 
-        X_train_new[:, :] = X_train[:, 0:n_poly]
-        X_test_new[:, :] = X_test[:, 0:n_poly]
+        X_train_bs[:, :] = X_train[:, 0:n_poly]
+        X_test_bs[:, :] = X_test[:, 0:n_poly]
+
+        X_train_OLS[:, :] = X_train_scaled[:, 0:n_poly]
+        X_test_OLS[:, :] = X_test_scaled[:, 0:n_poly]
 
         X_train_OLS = X_train_scaled[:, 0:n_poly]
         X_test_OLS = X_test_scaled[:, 0:n_poly]
@@ -159,7 +152,7 @@ if run_mode == 'b' or run_mode == 'all_f':
 
         # Bootstrap
         OLS = reg.OrdinaryLeastSquares(OLSmethod)
-        bs = res.Bootstrap(X_train_new, X_test_new, z_train, z_test, OLS, fun.mean_squared_error)
+        bs = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, OLS, fun.mean_squared_error)
         mean_OLS, var_OLS, bias_OLS = bs.compute(N_bootstraps)
         bs_mean_OLS[degree-1] = mean_OLS
         bs_var_OLS[degree-1] = var_OLS
@@ -214,7 +207,7 @@ if run_mode == 'b' or run_mode == 'all_f':
     plt.show()
 
 
-if run_mode == 'c' or run_mode == 'all_f':
+if run_mode == 'c':
     # TODO 1c dont do bias variance trade off with cross validation unless scikit learn since it takes more work to do by hand
     K = 5
 
@@ -230,9 +223,12 @@ if run_mode == 'c' or run_mode == 'all_f':
 #    for i in range(5):
 #        CV.split(X, y, K, i)
 
-    kfold = KFold(n_splits=K, random_state=None, shuffle=False)
+    kfold = KFold(n_splits=K)
+#    kfold = KFold(n_splits=K, random_state=None, shuffle=True)
     MSE_skl = 0
     for train_inds, test_inds in kfold.split(X):
+#        print(train_inds, 'aa', test_inds)
+
         X_train = X_scaled[train_inds]
         z_train = z_ravel[train_inds]
 
@@ -248,16 +244,43 @@ if run_mode == 'c' or run_mode == 'all_f':
     print('K=%d, MSE = %.5f' % (K, MSE_skl))
 
 
-if run_mode == 'd' or run_mode == 'all_f':
-    pass
-if run_mode == 'e' or run_mode == 'all_f':
+if run_mode == 'd':
+    # Setting up for Ridge regression
+    nlambdas = 100
+    lambdas = np.logspace(-4, 1, nlambdas)
+
+    # Splitting into train and test data
+    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)
+    #    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=test_size)
+
+    # Scaling the data
+    X_train_scaled = fun.scale_X(X_train, with_std=False)
+    X_test_scaled = fun.scale_X(X_test, with_std=False)
+    #    X_train_scaled = X_train
+    #    X_test_scaled = X_test
+
+    polydegree = np.arange(1, p + 1)
+    trainError = np.zeros(p)
+    testError = np.zeros(p)
+    bs_mean_OLS = np.zeros(p)
+    bs_var_OLS = np.zeros(p)
+    bs_bias_OLS = np.zeros(p)
+
+    OLS = reg.OrdinaryLeastSquares(OLSmethod)
+    for degree in range(1, p + 1):
+
+    for i in range(nlambdas):
+        lmb = lambdas[i]
+
+
+if run_mode == 'e':
     pass
 
 
 if data == 'terrain':
     pass
 
-if run_mode == 'f' or run_mode == 'all_t':
+if run_mode == 'f':
     pass
-if run_mode == 'g' or run_mode == 'all_t':
+if run_mode == 'g':
     pass

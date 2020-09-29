@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from sklearn.preprocessing import StandardScaler
+from imageio import imread
+
 
 ###########################################################
-
 
 def franke_function(x, y):
     """
@@ -158,6 +159,32 @@ def SVDinv(A):
     UT = np.transpose(U); V = np.transpose(VT); invD = np.linalg.inv(D)
     return np.matmul(V,np.matmul(invD,UT))
 
+
+def read_terrain(filename):
+    # Load the terrain
+    terrain = imread(filename)
+
+    N = 169#1000
+    m = 5  # polynomial order
+    print(terrain.shape)
+    terrain = terrain[:N, :N]
+    # Creates mesh of image pixels
+    x = np.linspace(0, 1, np.shape(terrain)[0])
+    y = np.linspace(0, 1, np.shape(terrain)[1])
+    x_mesh, y_mesh = np.meshgrid(x, y)
+
+    z = terrain
+#    X = generate_polynomial(x_mesh, y_mesh, m)
+
+    # Show the terrain
+    plt.figure()
+    plt.title('Terrain over Norway 2')
+    plt.imshow(terrain, cmap='gray')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.show()
+
+
 ###########################################################
 ############# Plotting and printing functions #############
 ###########################################################
@@ -298,9 +325,24 @@ def plot_degree_lambda(polydegree, lambdas, title, save, fig_path, task, fs=14):
 
 def plot_heatmap(x, y, z, title, save, fig_path, task, fs=14):
     fig = plt.figure()
-    heatmap = plt.pcolor(x, y, z)
+#    heatmap = plt.pcolor(x, y, z)
+    heatmap = plt.pcolor(z)
     fig.colorbar(heatmap)
+    loc, labels = plt.xticks()
+    step = int(loc[1]-loc[0])
+    locx = loc + step/2
+    print(locx, labels)
+    plt.xticks(loc, ['%.2f' % x[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
 
+    loc, labels = plt.yticks()
+    #locy = loc + (loc[1]-loc[0])/2
+    step = int(loc[1]-loc[0])
+    locy = loc + step/2
+
+    plt.yticks(loc, ['%.2f' % y[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
+
+#    ax.set_xticks(np.arange(z.shape[0]) + .5, minor=False)
+#    ax.set_yticks(np.arange(z.shape[1]) + .5, minor=False)
     plt.xlabel(r'$\lambda$', fontsize=fs)
     plt.ylabel('Polynomial degree', fontsize=fs)
     plt.title(title, fontsize=fs)
@@ -309,6 +351,20 @@ def plot_heatmap(x, y, z, title, save, fig_path, task, fs=14):
     # TODO: better filename
 
 
+def plot_lambda_mse(lambdas, mse, title, save, fig_path, task, fs=14):
+    plt.figure()
+    plt.plot(lambdas, mse)
+    plt.xlabel(r'$\lambda$', fontsize=fs)
+    plt.ylabel('MSE', fontsize=fs)
+    plt.title(title, fontsize=fs)
+    plt.xscale('log')
+    plt.grid('on')
+
+    plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
+
+
 if __name__ == '__main__':
-    # TODO: make it plot the franke function?
-    pass
+    # TODO: make it plot the franke function? AND TERRAIN DATA :D
+    data_path = '../datafiles/'
+    terrain_data = 'SRTM_data_Norway_2.tif'
+    read_terrain(data_path + terrain_data)

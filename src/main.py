@@ -251,7 +251,7 @@ if run_mode == 'c':
 
 if run_mode == 'd':
     # Setting up for Ridge regression
-    nlambdas = 100
+    nlambdas = 30#100
     lambdas = np.logspace(-4, 1, nlambdas)
 
     # Bootstrap
@@ -339,6 +339,16 @@ if run_mode == 'd':
         cv_lmb_optimal[degree-1] = lambdas[index_cv]
         cv_error_optimal[degree-1] = cv_error_Ridge[degree-1, index_cv]
 
+    # Locate minimum MSE to see how it depends on lambda
+    bs_min_error = np.unravel_index(np.argmin(bs_error_Ridge), bs_error_Ridge.shape)
+    cv_min_error = np.unravel_index(np.argmin(cv_error_Ridge), cv_error_Ridge.shape)
+
+    fun.plot_lambda_mse(lambdas, bs_error_Ridge[bs_min_error[0], :], 'Bootstrap p=%d' % bs_min_error[0],
+                        'bootstrap_p%d' % bs_min_error[0], fig_path, run_mode, fs=14)
+
+    fun.plot_lambda_mse(lambdas, cv_error_Ridge[cv_min_error[0], :], 'Cross-validation p=%d' % cv_min_error[0],
+                        'cv_p%d' % cv_min_error[0], fig_path, run_mode, fs=14)
+
     # Bootstrap Plots
     fun.plot_bias_variance(polydegree, bs_error_optimal, bs_bias_optimal, bs_var_optimal,
                            'Ridge regression', fig_path, run_mode)
@@ -379,7 +389,7 @@ if run_mode == 'e':
 
 
 if data == 'terrain':
-    pass
+    terrain_data = 'SRTM_data_Norway_2.tif'
 
 if run_mode == 'f':
     pass

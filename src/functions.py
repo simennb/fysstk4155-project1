@@ -87,22 +87,25 @@ def split_data(X, y, test_size=0.25):
     return X_train, X_test, y_train, y_test
 
 
-def scale_X(X, with_mean=True, with_std=True):
+def scale_X(X, scale=None):
     """
     Function for scaling X by subtracting the mean.
     Alternative to the skl StandardScaler to make sure intercept row is not set to 0
     :param X:
-    :param with_std:
-    :param with_mean:
+    :param scale:
     :return:
     """
+
     # TODO: check if scaling for test should be done with mean computed from train
 #    print(X[0:5, 3])
+    if scale is None:
+        scale = [True, False]
+
     X_new = X.copy()
     std = np.std(X_new, axis=0, keepdims=True)
-    if with_mean:
+    if scale[0]:  # MEAN
         X_new[:, 1:] -= np.mean(X_new[:, 1:], axis=0, keepdims=True)
-    if with_std:
+    if scale[1]:  # STD
         X_new[:, 1:] /= std[:, 1:]
 
 
@@ -215,20 +218,19 @@ def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise
     plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
 
 
-def plot_bias_variance(polydegree, error, bias, variance, fs=14):
-    print(bias)
+def plot_bias_variance(polydegree, error, bias, variance, title_mod, fig_path, task, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, error, label='Error')
-    plt.plot(polydegree, bias, label='bias')
+    plt.plot(polydegree, bias, label='Bias')
     plt.plot(polydegree, variance, label='Variance')
     plt.xlabel('Polynomial degree', fontsize=fs)
     plt.ylabel('Mean squared error', fontsize=fs)
-    plt.title('Bias variance trade-off', fontsize=fs)
+    plt.title('Bias variance %s' % title_mod, fontsize=fs)
     plt.grid('on')
     plt.legend()
     plt.ylim([0.0, 0.02])
 #    plt.yscale('log')
-    plt.show()
+    plt.savefig(fig_path+'task_%s/bias_variance.png' % task)
 
 
 def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size, fs=14):
@@ -257,11 +259,55 @@ def plot_confidence_int(beta, conf, method, fig_path, task, fs=14):
     plt.grid('on')
 
     plt.savefig(fig_path + 'task_%s/beta_conf_int_n%d_%s.png' % (task, n, method))
-#plt.errorbar(np.linspace(0, len(self.beta), len(self.beta)), self.beta, yerr=twostd_beta)
-#plt.title(r'$\beta$ confidence for %s' % method, fontsize=fs1)
-#plt.xlabel(r'$\beta_j$', fontsize=fs2)
-#plt.savefig('../figures/%s-%s-contour-beta-patch%s.png' % (task, method, patch))
-#plt.tight_layout()
+
+
+def plot_multiple_y(x, y, label, title, xlabel, ylabel, save, fig_path, task, fs=14):
+    """
+    :param x:
+    :param y: list of elements to plot y-axis
+    :param label: list of strings
+    :param title: string
+    :param xlabel: string
+    :param ylabel: string
+    :param fig_path:
+    :param run_mode:
+    :param fs:
+    :return:
+    """
+    fig = plt.figure()
+    for i in range(len(y)):
+        plt.plot(x, y[i], label=label[i])
+    plt.xlabel(xlabel, fontsize=fs)
+    plt.ylabel(ylabel, fontsize=fs)
+    plt.legend()
+    plt.grid('on')
+    plt.title(title, fontsize=fs)
+    plt.savefig(fig_path+'task_%s/%s.png' % (task, save))
+
+
+def plot_degree_lambda(polydegree, lambdas, title, save, fig_path, task, fs=14):
+    fig = plt.figure()
+    plt.plot(polydegree, lambdas)
+    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.ylabel(r'$\lambda$', fontsize=fs)
+    plt.title(r'%s' % title, fontsize=fs)
+    plt.grid('on')
+    plt.yscale('log')
+    plt.savefig(fig_path+'task_%s/degree_lambdas_%s.png' % (task, save))
+
+
+def plot_heatmap(x, y, z, title, save, fig_path, task, fs=14):
+    fig = plt.figure()
+    heatmap = plt.pcolor(x, y, z)
+    fig.colorbar(heatmap)
+
+    plt.xlabel(r'$\lambda$', fontsize=fs)
+    plt.ylabel('Polynomial degree', fontsize=fs)
+    plt.title(title, fontsize=fs)
+
+    plt.savefig(fig_path+'task_%s/heatmap_%s.png' % (task, save))
+    # TODO: better filename
+
 
 if __name__ == '__main__':
     # TODO: make it plot the franke function?

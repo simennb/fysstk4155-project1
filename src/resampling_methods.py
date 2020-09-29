@@ -50,7 +50,7 @@ class Bootstrap:
 #            print(len(np.unique(y_pred[:, i])))
 
  #       print(y_pred)
-        print('N_samples = %.2f , mean(unique) = %.2f  BS' % (np.mean(n_samp), np.mean(tot_unique)))
+#        print('N_samples = %.2f , mean(unique) = %.2f  BS' % (np.mean(n_samp), np.mean(tot_unique)))
 
         error = np.mean(np.mean((y_test - y_pred) ** 2, axis=1, keepdims=True))
         #error = np.mean(statistic)
@@ -172,7 +172,7 @@ class CrossValidation:
 
         X_train = X[train_indices]
         X_test = X[test_indices]
-        print(X_train.shape, X_test.shape)
+#        print(X_train.shape, X_test.shape)
 #        print(test_indices)
 #        print('train ', X_train)
 #        print('test ', X_test)

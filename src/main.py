@@ -9,6 +9,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
+import sklearn.linear_model as skl
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.utils import resample
@@ -31,7 +32,7 @@ data = 'terrain' if run_mode in ['f', 'g'] else data
 
 # Common variables for both parts for easy adjusting
 p_dict = {'a': 5, 'b': 10, 'c': 5, 'd': 10,
-          'e': 5, 'f': 10, 'g': 5, 'h': 10}
+          'e': 10, 'f': 10, 'g': 5, 'h': 10}
 scale_dict = {'a': [True, False], 'b': [True, False], 'c': [True, False], 'd': [True, False],
               'e': [True, False], 'f': [True, False], 'g': [True, False], 'h': [True, False]}
 p = p_dict[run_mode]
@@ -39,15 +40,16 @@ scale = scale_dict[run_mode]
 
 test_size = 0.2
 fig_path = '../figures/'
+data_path = '../datafiles/'
 
 OLSmethod = 5
 
 if data == 'franke':
     # Creating data set for the Franke function tasks
     np.random.seed(4155)
-    n_franke = 13  # number of samples of x/y
+    n_franke = 32  # number of samples of x/y
     N = n_franke**2  # Total number of samples n*2
-    noise = 0.0  # 2
+    noise = 0.1  # 2
     p = p_dict[run_mode]  # degree of polynomial for the task
 
     # Randomly generated meshgrid
@@ -80,8 +82,6 @@ if run_mode == 'a':
     X_train_scaled = fun.scale_X(X_train, scale)
     X_test_scaled = fun.scale_X(X_test, scale)
 
-    print('Meow ', np.array_equal(X_train_scaled, X_train))
-
     # Ordinary Least Squares
     OLS = reg.OrdinaryLeastSquares()
     betaOLS = OLS.fit(X_train_scaled, z_train)
@@ -99,7 +99,9 @@ if run_mode == 'a':
 
 if run_mode == 'b':
     N_samples = N  # number of samples per bootstrap
-    N_bootstraps = 100  # number of resamples
+#    N_bootstraps = 100  # number of resamples
+    N_bootstraps = int(N/2)  # number of resamples
+#    N_bootstraps = N
 
     # Splitting into train and test data
     X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)
@@ -200,7 +202,9 @@ if run_mode == 'b':
 
 #    fun.plot_MSE_test_OLS_fit(polydegree, trainError, testError, n_franke, test_size, noise, OLSmethod)
 
-    fun.plot_bias_variance(polydegree, bs_mean_OLS, bs_bias_OLS, bs_var_OLS, 'trade-off', fig_path, run_mode)
+    fun.plot_bias_variance(polydegree, bs_mean_OLS, bs_bias_OLS, bs_var_OLS,
+                           'trade-off, $N$=%d, $N_{bs}$=%d' % (N, N_bootstraps),
+                           'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
 
     plt.show()
 
@@ -251,11 +255,11 @@ if run_mode == 'c':
 
 if run_mode == 'd':
     # Setting up for Ridge regression
-    nlambdas = 30#100
+    nlambdas = 30  # 100
     lambdas = np.logspace(-4, 1, nlambdas)
 
     # Bootstrap
-    N_bootstraps = 100
+    N_bootstraps = int(N/2)  # 100
 
     # Cross-validation
     K = 5
@@ -309,7 +313,7 @@ if run_mode == 'd':
             Ridge.set_lambda(lmb)
 
             if i % 10 == 0:
-                print('i = %d, lmb= %.3f' % (i, lmb))
+                print('i = %d, lmb= %.3e' % (i, lmb))
 
             # Bootstrap
             BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, Ridge, fun.mean_squared_error)
@@ -351,7 +355,9 @@ if run_mode == 'd':
 
     # Bootstrap Plots
     fun.plot_bias_variance(polydegree, bs_error_optimal, bs_bias_optimal, bs_var_optimal,
-                           'Ridge regression', fig_path, run_mode)
+                           'Ridge regression, $N$=%d, $N_{bs}$=%d' % (N, N_bootstraps),
+                           'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
+
     fun.plot_degree_lambda(polydegree, bs_lmb_optimal, 'Bootstrap $\lambda$ value at min(error)',
                            'bootstrap', fig_path, run_mode)
 
@@ -371,27 +377,91 @@ if run_mode == 'd':
     fun.plot_heatmap(lambdas, polydegree, cv_error_Ridge, 'CV + Ridge, MSE',
                      'cv_ridge_error', fig_path, run_mode)
 
-
-    '''
-    fig = plt.figure()
-#    p_mesh, lmb_mesh = np.meshgrid(polydegree, lambdas)
-    heatmap = plt.pcolor(lambdas, polydegree, bs_error_Ridge)
-    plt.xlabel(r'$\lambda$')
-    plt.ylabel('Polynomial degree')
-    fig.colorbar(heatmap)#bs_error_Ridge)
-#    plt.pcolor(bs_error_Ridge)
-    '''
     plt.show()
 
 
 if run_mode == 'e':
-    pass
+    # Lambdas / alphas for LASSO regression
+    nlambdas = 15#30  # 100
+    lambdas = np.logspace(-4, 1, nlambdas)
+
+    # Bootstrap and cross-validation
+    N_bootstraps = int(N/2)
+    K = 5
+
+    # Splitting into train and test data
+    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)
+
+    # Scaling the data
+    X_train_scaled = fun.scale_X(X_train, scale)
+    X_test_scaled = fun.scale_X(X_test, scale)
+    X_scaled = fun.scale_X(X)
+
+    # Bootstrap arrays
+    bs_error_Lasso = np.zeros((p, nlambdas))
+    bs_var_Lasso = np.zeros((p, nlambdas))
+    bs_bias_Lasso = np.zeros((p, nlambdas))
+
+    bs_error_optimal = np.zeros(p)
+    bs_var_optimal = np.zeros(p)
+    bs_bias_optimal = np.zeros(p)
+    bs_lmb_optimal = np.zeros(p)
+
+    # Cross-validation arrays
+    cv_error_Lasso = np.zeros((p, nlambdas))
+    cv_error_optimal = np.zeros(p)
+    cv_lmb_optimal = np.zeros(p)
+
+    polydegree = np.arange(1, p + 1)
+    for degree in range(1, p + 1):
+        n_poly = fun.polynom_N_terms(degree)
+        print('p = %2d, np = %3d' % (degree, n_poly))
+
+        X_train_bs = np.zeros((len(X_train_scaled), n_poly))
+        X_test_bs = np.zeros((len(X_test_scaled), n_poly))
+        X_cv = np.zeros((len(X_scaled), n_poly))
+
+        X_train_bs[:, :] = X_train_scaled[:, 0:n_poly]
+        X_test_bs[:, :] = X_test_scaled[:, 0:n_poly]
+        X_cv[:, :] = X_scaled[:, 0:n_poly]
+
+        for i in range(nlambdas):
+            lmb = lambdas[i]
+
+            if i % 10 == 0:
+                print('i = %d, lmb= %.3e' % (i, lmb))
+
+            Lasso = skl.Lasso(alpha=lmb, max_iter=100000)
+
+            # Bootstrap
+            BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, Lasso, fun.mean_squared_error)
+            error_, var_, bias_ = BS.compute(N_bootstraps)
+            bs_error_Lasso[degree-1, i] = error_
+            bs_var_Lasso[degree-1, i] = var_
+            bs_bias_Lasso[degree-1, i] = bias_
+
+            # Cross validation
+            CV = res.CrossValidation(X_cv, z_ravel, Lasso, fun.mean_squared_error)
+            cv_error_Lasso[degree-1, i] = CV.compute(K)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_error_Lasso, 'Bootstrap + Lasso, MSE',
+                     'bs_lasso_error', fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, cv_error_Lasso, 'Cross-validation + Lasso, MSE',
+                     'cv_lasso_error', fig_path, run_mode)
+
+    plt.show()
 
 
 if data == 'terrain':
     terrain_data = 'SRTM_data_Norway_2.tif'
+    data_path = '../datafiles/'
+    terrain_data = 'SRTM_data_Norway_2.tif'
+    fun.read_terrain(data_path + terrain_data)
 
 if run_mode == 'f':
+    # fetch terrain data and plot it i guess
     pass
+
 if run_mode == 'g':
     pass

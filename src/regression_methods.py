@@ -37,6 +37,8 @@ class OrdinaryLeastSquares:
 
         sigma2 = 1/(N-p-1)*np.sum((y-ytilde)**2)
         var_beta = np.diagonal(np.linalg.pinv(X.T @ X)) * sigma2
+
+        print(sigma2, var_beta)
         conf = 2*np.sqrt(var_beta)
 
         return conf

@@ -160,11 +160,11 @@ def SVDinv(A):
     return np.matmul(V,np.matmul(invD,UT))
 
 
-def read_terrain(filename):
+def read_terrain(filename, N):
     # Load the terrain
     terrain = imread(filename)
 
-    N = 169#1000
+#    N = 1000
     m = 5  # polynomial order
     print(terrain.shape)
     terrain = terrain[:N, :N]
@@ -177,13 +177,14 @@ def read_terrain(filename):
 #    X = generate_polynomial(x_mesh, y_mesh, m)
 
     # Show the terrain
+    '''
     plt.figure()
     plt.title('Terrain over Norway 2')
     plt.imshow(terrain, cmap='gray')
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.show()
-
+    '''
 
 ###########################################################
 ############# Plotting and printing functions #############
@@ -245,19 +246,19 @@ def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise
     plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
 
 
-def plot_bias_variance(polydegree, error, bias, variance, title_mod, fig_path, task, fs=14):
+def plot_bias_variance(polydegree, error, bias, variance, title_mod, save, fig_path, task, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, error, label='Error')
     plt.plot(polydegree, bias, label='Bias')
     plt.plot(polydegree, variance, label='Variance')
     plt.xlabel('Polynomial degree', fontsize=fs)
     plt.ylabel('Mean squared error', fontsize=fs)
-    plt.title('Bias variance %s' % title_mod, fontsize=fs)
+    plt.title(r'Bias variance %s' % title_mod, fontsize=fs)
     plt.grid('on')
     plt.legend()
     plt.ylim([0.0, 0.02])
 #    plt.yscale('log')
-    plt.savefig(fig_path+'task_%s/bias_variance.png' % task)
+    plt.savefig(fig_path+'task_%s/bias_variance_%s.png' % (task, save))
 
 
 def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size, fs=14):
@@ -332,14 +333,14 @@ def plot_heatmap(x, y, z, title, save, fig_path, task, fs=14):
     step = int(loc[1]-loc[0])
     locx = loc + step/2
     print(locx, labels)
-    plt.xticks(loc, ['%.2f' % x[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
+    plt.xticks(loc, ['%.2e' % x[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
 
     loc, labels = plt.yticks()
     #locy = loc + (loc[1]-loc[0])/2
     step = int(loc[1]-loc[0])
     locy = loc + step/2
 
-    plt.yticks(loc, ['%.2f' % y[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
+    plt.yticks(loc, ['%d' % y[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
 
 #    ax.set_xticks(np.arange(z.shape[0]) + .5, minor=False)
 #    ax.set_yticks(np.arange(z.shape[1]) + .5, minor=False)
@@ -364,7 +365,5 @@ def plot_lambda_mse(lambdas, mse, title, save, fig_path, task, fs=14):
 
 
 if __name__ == '__main__':
-    # TODO: make it plot the franke function? AND TERRAIN DATA :D
-    data_path = '../datafiles/'
-    terrain_data = 'SRTM_data_Norway_2.tif'
-    read_terrain(data_path + terrain_data)
+    # TODO: make it plot the franke function?
+    pass

@@ -25,14 +25,14 @@ class Bootstrap:
         statistic = np.zeros(N_bootstraps)
 #        bias = np.zeros(N_resamples)
 
-        tot_unique = np.zeros(N_bootstraps)
-        n_samp = np.zeros(N_bootstraps)
+#        tot_unique = np.zeros(N_bootstraps)
+#        n_samp = np.zeros(N_bootstraps)
         for i in range(N_bootstraps):
 #            print(1)
             X_new, y_new = self.resample(self.X_train, self.y_train)
 #            X_new, y_new = resample(self.X_train, self.y_train)#, n_samples=N_bs)
-            tot_unique[i] = len(np.unique(y_new))
-            n_samp[i] = len(X_new[:, -1])
+#            tot_unique[i] = len(np.unique(y_new))
+#            n_samp[i] = len(X_new[:, -1])
 #            X_new = self.X_train
 #            y_new = self.y_train
 

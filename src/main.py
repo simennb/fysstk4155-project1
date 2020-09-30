@@ -49,7 +49,8 @@ if data == 'franke':
     np.random.seed(4155)
     n_franke = 32  # number of samples of x/y
     N = n_franke**2  # Total number of samples n*2
-    noise = 0.1  # 2
+    noise = 0.01  # 2
+#    noise = 0.8571
     p = p_dict[run_mode]  # degree of polynomial for the task
 
     # Randomly generated meshgrid
@@ -81,6 +82,10 @@ if run_mode == 'a':
     # Scaling the data
     X_train_scaled = fun.scale_X(X_train, scale)
     X_test_scaled = fun.scale_X(X_test, scale)
+
+    # Plotting the Franke function
+    fun.plot_surf(x_mesh, y_mesh, z_mesh, 'x', 'y', 'Franke function, $N$=%d, noise=%.2f' % (N, noise),
+                  'franke_n%d' % N, fig_path, run_mode, zlim=[-0.10, 1.40])
 
     # Ordinary Least Squares
     OLS = reg.OrdinaryLeastSquares()
@@ -454,14 +459,30 @@ if run_mode == 'e':
 
 
 if data == 'terrain':
+    # (3601, 1801) dimensions of image
+    n_terrain = 250
+    loc_s = [1550, 0]  # pretty interesting shape
+    loc_e = [loc_s[0] + n_terrain, loc_s[1] + n_terrain]
+    print(loc_s, loc_e)
+    N = n_terrain**2
     terrain_data = 'SRTM_data_Norway_2.tif'
-    data_path = '../datafiles/'
-    terrain_data = 'SRTM_data_Norway_2.tif'
-    fun.read_terrain(data_path + terrain_data)
+    x_mesh, y_mesh, z_mesh = fun.read_terrain(data_path + terrain_data, n_terrain, loc_s)
+
+    # Raveling
+    x = np.ravel(x_mesh)
+    y = np.ravel(y_mesh)
+    z = np.ravel(z_mesh)
 
 if run_mode == 'f':
     # fetch terrain data and plot it i guess
-    pass
+    fun.plot_terrain(z_mesh, 'Terrain, location [%d, %d] to [%d, %d]' % (loc_s[0], loc_s[1], loc_e[0], loc_e[1]),
+                     'terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]), fig_path, run_mode)
+
+    fun.plot_surf(y_mesh, x_mesh, z_mesh, 'x', 'y', 'Terrain, $N$=%d' % N,
+                  'surf_terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]), fig_path, run_mode)
+
+    plt.show()
+
 
 if run_mode == 'g':
     pass

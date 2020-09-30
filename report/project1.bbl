@@ -1,0 +1,11 @@
+\begin{thebibliography}{1}
+
+\bibitem{Github1}
+Github repository, project 1.
+\newblock \url{https://github.com/simennb/fysstk4155-project1}.
+
+\bibitem{vanwieringen2020lecture}
+Wessel~N. van Wieringen.
+\newblock Lecture notes on ridge regression, 2020.
+
+\end{thebibliography}

@@ -1,5 +1,5 @@
 \documentclass{article}
-\usepackage{amsmath}
+\usepackage{amsmath,amsfonts,amssymb}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}
 \usepackage{verbatim}
@@ -134,6 +134,11 @@
 \newcommand{\TomK}[1]{\Big\lbrace #1 \Big\rbrace}
 \newcommand{\bigabs}[1]{\left| #1 \right|}
 
+% Practical macros for FYS-STK4155
+\newcommand{\XX}{\mathbf{X}}
+\newcommand{\II}{\textbf{I}}
+\newcommand{\T}{\mathsf{T}}
+
 % Section labeling
 %\usepackage{titlesec}% http://ctan.org/pkg/titlesec
 %\renewcommand{\thesubsection}{\arabic{subsection}}
@@ -151,8 +156,11 @@ The goal of this project is to do linear regression with bootstrapping and cross
 \end{abstract}
 
 \section{Introduction}
-
-The heart.
+% not good enough maybe check first sentence
+With the emergence of more powerful computers, the field of machine learning has exploded in recent years, and is steadily becoming an integral part of many fields of science. While many of the concepts and algorithms used in machine learning today has been known for a long time, the emergence of more powerful dauowhiao h adwd
+One of the simplest and most studied methods is so-called linear regression.
+\\\\
+The heart. \cite{Github1}
 
 \section{Theory}
 \subsection{Linear regression}
@@ -163,6 +171,13 @@ The heart.
 \subsubsection{Bootstrap}
 \subsubsection{Cross-validation}
 \subsection{Confidence intervals}
+
+Variance for $\beta$ for Ridge regression can be found in \cite{vanwieringen2020lecture}
+\begin{align*}
+\text{Var}[\hat\beta(\lambda)] &= \sigma^2(\XX^\T\XX + \lambda\II_{pp})^{-1}
+\XX^\T \XX[(\XX^\T \XX + \lambda \II_{pp})^{-1}]^\T
+\end{align*}
+
 \section{Implementation}
 
 \section{Results}
@@ -171,8 +186,8 @@ The heart.
 
 \section{Conclusion}
 
-\section*{References}
 
 \section{Appendixes?}
+\bibliography{references}
 
 \end{document}

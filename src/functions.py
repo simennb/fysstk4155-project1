@@ -96,7 +96,6 @@ def scale_X(X, scale=None):
     :param scale:
     :return:
     """
-
     # TODO: check if scaling for test should be done with mean computed from train
 #    print(X[0:5, 3])
     if scale is None:
@@ -109,25 +108,6 @@ def scale_X(X, scale=None):
     if scale[1]:  # STD
         X_new[:, 1:] /= std[:, 1:]
 
-
-
-#    X_temp = (X[:, 1:]).copy()  # leaving out the intercept
-#    X_temp -= np.mean(X_temp, axis=0, keepdims=True)
-#    X_new[:, 1:] = X_temp[:, :]
-#    print(X_new[0:5, 3])
-
-    # [0.13255961 0.66424334 0.66424334 0.34695174 0.45311719]
-    # [-0.18519098  0.34649275  0.34649275  0.02920115  0.1353666 ]
-    # Both methods equivalent
-    # [0.13255961 0.66424334 0.66424334 0.34695174 0.45311719]
-    # [-0.18519098  0.34649275  0.34649275  0.02920115  0.1353666 ]
-
-#    print(X[0:5, 3])
-#    X_temp = X[:, 1:]
-#    X_temp -= np.mean(X_temp, axis=0)  # TODO THIS CHANGES X OUTSIDE OF FUNCTION
-#    print('aaaa')
-#    print(X[0:5, 3])
-#    return X
     return X_new
 
 
@@ -160,31 +140,22 @@ def SVDinv(A):
     return np.matmul(V,np.matmul(invD,UT))
 
 
-def read_terrain(filename, N):
+def read_terrain(filename, N, loc_start, norm=True):
     # Load the terrain
     terrain = imread(filename)
 
-#    N = 1000
-    m = 5  # polynomial order
-    print(terrain.shape)
-    terrain = terrain[:N, :N]
+    # Normalize terrain data by dividing by maximum value
+    if norm:
+        terrain = terrain / np.amax(terrain)
+
+    terrain = terrain[loc_start[1]:loc_start[1] + N, loc_start[0]:loc_start[0] + N]
     # Creates mesh of image pixels
     x = np.linspace(0, 1, np.shape(terrain)[0])
     y = np.linspace(0, 1, np.shape(terrain)[1])
     x_mesh, y_mesh = np.meshgrid(x, y)
+    z_mesh = terrain
 
-    z = terrain
-#    X = generate_polynomial(x_mesh, y_mesh, m)
-
-    # Show the terrain
-    '''
-    plt.figure()
-    plt.title('Terrain over Norway 2')
-    plt.imshow(terrain, cmap='gray')
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.show()
-    '''
+    return x_mesh, y_mesh, z_mesh
 
 ###########################################################
 ############# Plotting and printing functions #############
@@ -364,6 +335,44 @@ def plot_lambda_mse(lambdas, mse, title, save, fig_path, task, fs=14):
     plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
 
 
+def plot_surf(x, y, z, xlab, ylab, title, save, fig_path, task, zlim=None, fs=14):
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+
+    # Plot the surface.
+    surf = ax.plot_surface(x, y, z, cmap=cm.coolwarm,
+                           linewidth=0, antialiased=False)
+
+    plt.xlabel(r'%s' % xlab, fontsize=fs)
+    plt.ylabel(r'%s' % ylab, fontsize=fs)
+    plt.title(r'%s' % title, fontsize=fs)
+
+    # Customize the z axis.
+    if zlim is not None:
+        ax.set_zlim(zlim[0], zlim[1])
+    ax.zaxis.set_major_locator(LinearLocator(10))
+    ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
+
+    # Add a color bar which maps values to colors.
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+
+    plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
+
+
+def plot_terrain(z, title, save, fig_path, task, fs=14):
+    plt.figure()
+    plt.title(title, fontsize=fs)
+    plt.imshow(z, cmap='gray')
+    plt.xlabel('X', fontsize=fs)
+    plt.ylabel('Y', fontsize=fs)
+
+    plt.savefig(fig_path+'task_%s/%s.png' % (task, save))
+
+
 if __name__ == '__main__':
     # TODO: make it plot the franke function?
-    pass
+    terrain_data = '../datafiles/SRTM_data_Norway_2.tif'
+    terrain = imread(terrain_data)
+    plot_terrain(terrain, 'Terrain over Norway 2', 'entire_map', '../figures/', 'f', fs=10)
+
+    plt.show()

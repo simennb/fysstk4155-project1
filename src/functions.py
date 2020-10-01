@@ -6,9 +6,25 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from sklearn.preprocessing import StandardScaler
 from imageio import imread
+import time
 
 
 ###########################################################
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+        if 'log_time' in kw:
+            name = kw.get('log_name', method.__name__.upper())
+            kw['log_time'][name] = int((te - ts) * 1000)
+        else:
+            print('%r  %2.2f ms' % (method.__name__, (te - ts) * 1000))
+        return result
+    return timed
+
+###########################################################
+
 
 def franke_function(x, y):
     """
@@ -251,7 +267,7 @@ def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size, fs=14):
 def plot_confidence_int(beta, conf, method, fig_path, task, fs=14):
     n = len(beta)
     fig = plt.figure()
-    plt.errorbar(range(len(beta)), beta, conf)
+    plt.errorbar(range(len(beta)), beta, conf, fmt=".", capsize=3, elinewidth=1, mew=1)
     plt.title(r'Confidence intervals for $\beta$, method=%s' % method, fontsize=fs)
     plt.xlabel(r'$i$', fontsize=fs)
     plt.ylabel(r'$\beta_i$', fontsize=fs)
@@ -335,7 +351,7 @@ def plot_lambda_mse(lambdas, mse, title, save, fig_path, task, fs=14):
     plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
 
 
-def plot_surf(x, y, z, xlab, ylab, title, save, fig_path, task, zlim=None, fs=14):
+def plot_surf(x, y, z, xlab, ylab, zlab, title, save, fig_path, task, zlim=None, fs=14):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
@@ -345,6 +361,7 @@ def plot_surf(x, y, z, xlab, ylab, title, save, fig_path, task, zlim=None, fs=14
 
     plt.xlabel(r'%s' % xlab, fontsize=fs)
     plt.ylabel(r'%s' % ylab, fontsize=fs)
+#    plt.zlabel(r'%s' % xlab, fontsize=fs)
     plt.title(r'%s' % title, fontsize=fs)
 
     # Customize the z axis.
@@ -355,6 +372,7 @@ def plot_surf(x, y, z, xlab, ylab, title, save, fig_path, task, zlim=None, fs=14
 
     # Add a color bar which maps values to colors.
     fig.colorbar(surf, shrink=0.5, aspect=5)
+    # TODO SET COLORBAR LABEL
 
     plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
 
@@ -367,6 +385,7 @@ def plot_terrain(z, title, save, fig_path, task, fs=14):
     plt.ylabel('Y', fontsize=fs)
 
     plt.savefig(fig_path+'task_%s/%s.png' % (task, save))
+
 
 
 if __name__ == '__main__':

@@ -18,6 +18,7 @@
 \usepackage{listings}
 \usepackage{multicol}
 \usepackage{units}
+\usepackage{bm}
 
 % From Eirik's .tex
 \usepackage{epstopdf}
@@ -152,42 +153,135 @@
 \maketitle
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-The goal of this project is to do linear regression with bootstrapping and cross-validation on the Franke function and real data.
+In this project, we will study various methods of linear regression, namely the Ordinary Least Squares method, Ridge, and Lasso regression, as well as investigate resampling the data via Bootstrapping and $k$-fold Cross-Validation. The data we will be looking at is the so-called Franke function, as well as terrain elevation data from a region in Norway. The Franke function gives us a way of testing our implementation before moving on to the more complex terrain data.%The goal of this project is to do linear regression with bootstrapping and cross-validation on the Franke function and real data.
 \end{abstract}
 
 \section{Introduction}
 % not good enough maybe check first sentence
-With the emergence of more powerful computers, the field of machine learning has exploded in recent years, and is steadily becoming an integral part of many fields of science. While many of the concepts and algorithms used in machine learning today has been known for a long time, the emergence of more powerful dauowhiao h adwd
-One of the simplest and most studied methods is so-called linear regression.
-\\\\
-The heart. \cite{Github1}
 
-\section{Theory}
-\subsection{Linear regression}
+With the emergence of more powerful computers, the field of machine learning is steadily becoming an integral part of both business and many fields of science. While many of the concepts and algorithms used in machine learning today has been known for a long time, some of them have simply been too computationally expensive to do efficiently. While not typically too computationally heavy, linear regression is one of the simplest and most-studied forms of machine learning, and provides a good introduction to concepts commonly used in machine learning. 
+\\\\
+In this project, we will look at three different methods of regression analysis and compare how they fare against each other. The methods we will be using is the Ordinary Least Squares method, Ridge regression, and Lasso regression. We will also see how resampling the data affects the results from the regression methods, by implementing the Bootstrap algorithm and the $k$-fold Cross-Validation.
+\\\\
+There are two different data sets that will be studied in this project. The first, is the Franke function from \cite{Franke}, as well as terrain data for a region in Norway taken from \cite{terrain}. First, in Chapter \ref{chap:theory} we will introduce the theory behind linear regression, as well as the the regression methods and resampling methods employed later in the project. In Chapter \ref{chap:implement} we go through the implementation of the methods, explaining how the code is structured and used. Then, in Chapter \ref{chap:results} we go through the results of both the Franke function and the terrain data, discussing them in more detail in Chapter \ref{chap:discussion}. Lastly, we conclude our findings in Chapter \ref{chap:conclusion}.
+
+\section{Theory} \label{chap:theory}
+%For the derivation of the OLS method, Ridge, and Lasso regression, we will follow Chapter 2.3 and 3.4 of Hastie et al. \cite{Hastie}
+\subsection{Linear regression} \label{sec:linreg}
+%Assume we have a data set $\bm{y}$
+%At its core, x
+Linear regression is a method of fitting a set of $p$ \textit{predictors} $\bm{X}$ to a data set $\bm{y}$, while minimizing the error between the \textit{response} $\bm{\tilde y}$ and the actual data $\bm{y}$. For each of the $n$ samples $y_i$ in the data set the relationship between the response and the predictors $\bm{X}_i$ is modeled in a linear fashion, giving us the following matrix equation
+\begin{align*}
+	\mathbf{y} &= \XX\beta + \bm{\epsilon}
+\end{align*}
+where $\beta = (\beta_0, \beta_1, ..., \beta_ {p-1})^\T$ are the regression parameters we are trying to estimate, one for each predictor, and $\bm{\epsilon}$ is the error in our approximation. The matrix $\XX$ is often called the design matrix, and the equation can be written a bit more explicitly as
+\begin{align*}
+	y_i &= \beta_0 + X_{i,1}\beta_1 + ... + X_{i,p-1}\beta_{p-1} + \epsilon_i
+\end{align*}
+Exactly what each predictor is can vary a lot from case to case, and how the design matrix is set up is important for the accuracy of the fit. In our case, we will focus on a form of linear regression where the predictors is on the form of a polynomial in the input parameters. In the case where we have a data set $\bm{y}(\bm{x})$, the design matrix can for example be written on the form of
+\begin{align*}
+	\XX &= (\bm{x}^0, \bm{x}^1, ... , \bm{x}^{p-1})
+\end{align*} 
+With that said, we still need some way to find the $\beta$'s that fit the data best, and we will now look at three ways to try to do this.
+% This is done
+%Assuming that we have a set of \textit{response} allalal
+%linear regresssion Fitting a continuous function with linear parameterization in terms of the parameters $\beta$.
+%Giving us the matrix equation
+%Linear regression is a way of modeling a relationship between the response $y_i$ and some amount of explanatory variables $x_i$ in a linear fashion. Assume we have 
+%\begin{align*}
+%	\mathbf{y} &= \beta_0 + \sum_{i=1}^{p}\XX_i\beta_i + \mathbf{\varepsilon}_i
+%	\mathbf{y} &= \XX\beta + \mathbf{\varepsilon}\\
+%	\mathbf{y}_i &= \beta_0 + \sum_{j=1}^{p}\XX_{ij}\beta_j + \mathbf{\varepsilon}_i	
+%\end{align*}
+
 \subsubsection{Ordinary least squares}
+Following Chapter 2.3 of Hastie et al. \cite{Hastie}, in order to find the optimal regression parameters $\beta$, the OLS method minimizes the residual sum of squares
+\begin{align*}
+	\text{RSS}(\beta) &= \sum_{i=1}^N(y_i-x_i^T\beta)^2
+\end{align*}
+With $\bm{y}$ as the vector containing all $N$ $y_i$, and $X$ an $N\times p$ matrix as shown in section \ref{sec:linreg}, this can be written as
+\begin{align*}
+	\text{RSS}(\lambda) &= (\bm{y} - \XX\beta)^\T(\bm{y}-\XX\beta)
+\end{align*}
+Differentiating with respect to $\beta$ we get
+\begin{align*}
+	\pd{\text{RSS}}{\beta} &= X^\T(\bm{y}-\XX\beta)
+\end{align*}
+In order to find an optimal $\beta$, this has to be zero
+\begin{align*}
+	\XX^\T(\bm{y}-\XX\beta) &= 0\\
+	\XX^\T\XX\beta &= \XX^T\bm{y}
+\end{align*}
+Finally giving us the expression for the optimal regression parameters
+\begin{align*}
+	\beta &= (\XX^\T\XX)^{-1}\XX^\T\bm{y}
+\end{align*}
+assuming that $\XX^\T\XX$ is invertible.
+
 \subsubsection{Ridge regression}
-\subsubsection{LASSO regression}
+Ridge regression is an example of a so-called shrinkage method, which shrinks the regression coefficients by adding a small penalty proportional to their size.
+\begin{align*}
+	\beta^{\text{Ridge}} &= \underset{\beta\in \mathbb{R}^{p}}{\text{min}}\frac{1}{n}||\bm{X}\beta - \bm{y}||^2_2 + \lambda||\beta||^2_2
+\end{align*}
+where $\lambda$ is a regularization parameter that controls the amount of shrinkage, and we $||\beta||^2_2 \leq t$ where $t$ is a finite number larger than zero. The higher $\lambda$, the more shrinkage occurs. This can be shown to give the Ridge solution
+\begin{align*}
+	\beta^{\text{Ridge}} &= (\XX^\T\XX + \lambda I)^{-1}\XX^\T\bm{y}
+\end{align*}
+The aim with Ridge regression is to limit the potential problems with singularities when computing the inverse of $\XX^\T\XX$, which can be a problem when there are many correlated variables.
+\subsubsection{Lasso regression}
+Lasso regression is another shrinkage method, with a slightly different optimization equation compared to Ridge regression
+\begin{align*}
+	\beta^{\text{Lasso}} &= \underset{\beta\in \mathbb{R}^{p}}{\text{min}}\frac{1}{n}||\bm{X}\beta - \bm{y}||^2_2 + \lambda||\beta||_1
+\end{align*}
+where $||\beta||_1$ is the $L_{1}$ norm.
+\subsection{Bias-Variance decomposition}
+\begin{align*}
+	C(\XX, \beta) &= \frac{1}{n}\sum_{i=0}^{n-1}(y_i-\tilde y_i)^2 = \mathbb{E}[(\bm{y}-\bm{\tilde y})^2]
+\end{align*}
+\subsection{R2????}
+\subsection{Confidence intervals}
+For the OLS and Ridge regression cases, it is possible to derive the variance of $\beta$ \cite{vanwieringen2020lecture}, and thus the confidence intervals as well. For the OLS method, the variance is given by
+\begin{align*}
+	\text{Var}(\beta) &= \sigma^2(\XX^\T\XX)^{-1}
+\end{align*}
+where $\sigma^2$ is the estimated variance of $y$ given by %TODO a eiwahjhlkwa hw
+\begin{align*}
+	\sigma^2 &= \frac{1}{N-p-1}\sigma_{i=1}^N(y_i-\tilde y_i)^2
+\end{align*}
+Taking the square root of the diagonal of $(\XX^\T\XX)^{-1}$ gives us an estimate of the variance of the $j$-th regression coefficient
+\begin{align*}
+	\sigma^2(\beta_j) &= \sigma^2\sqrt{[\XX^\T\XX]^{-1}_{jj}}
+\end{align*}
+Letting us construct the 95\% confidence intervals by
+%The confidence interval is then given by
+\begin{align*}
+	\text{CI}(\beta_j) &= \bigg[\beta_j - 2\sqrt{\sigma_2(\beta_j)}\:,\;\; \beta_j + 2\sqrt{\sigma_2(\beta_j)}\bigg]
+\end{align*}
+%Both can be found in van vieringen | also lecture notes...... 36
+Similarly, the variance for $\beta$ for Ridge regression can be found to be
+\begin{align*}
+\text{Var}[beta^{\text{Ridge}}] &= \sigma^2[\XX^\T\XX + \lambda\II]^{-1}
+\XX^\T \XX[(\XX^\T \XX + \lambda \II)^{-1}]^\T
+\end{align*}
+and confidence interval can be constructed following the same steps as done above for OLS.% the same way as above for OLS.
+
 \subsection{Resampling methods}
 \subsubsection{Bootstrap}
 \subsubsection{Cross-validation}
-\subsection{Confidence intervals}
 
-Variance for $\beta$ for Ridge regression can be found in \cite{vanwieringen2020lecture}
-\begin{align*}
-\text{Var}[\hat\beta(\lambda)] &= \sigma^2(\XX^\T\XX + \lambda\II_{pp})^{-1}
-\XX^\T \XX[(\XX^\T \XX + \lambda \II_{pp})^{-1}]^\T
-\end{align*}
+\section{Implementation} \label{chap:implement}
+The heart. \cite{Github1}
 
-\section{Implementation}
+\section{Results} \label{chap:results}
 
-\section{Results}
+\section{Discussion} \label{chap:discussion}
 
-\section{Discussion}
-
-\section{Conclusion}
+\section{Conclusion} \label{chap:conclusion}
+Introduce why we set out, then explain results
 
 
-\section{Appendixes?}
 \bibliography{references}
-
+\appendix
+%\section*{Appendix} \label{chap:appendix}
+\section{Appendix} \label{chap:appendix}
 \end{document}

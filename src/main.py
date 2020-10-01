@@ -44,6 +44,9 @@ data_path = '../datafiles/'
 
 OLSmethod = 5
 
+# https://piazza.com/class/kd5v8pfxs87581?cid=74
+# PLEASE CHECK THIS SHIT
+
 if data == 'franke':
     # Creating data set for the Franke function tasks
     np.random.seed(4155)
@@ -84,7 +87,7 @@ if run_mode == 'a':
     X_test_scaled = fun.scale_X(X_test, scale)
 
     # Plotting the Franke function
-    fun.plot_surf(x_mesh, y_mesh, z_mesh, 'x', 'y', 'Franke function, $N$=%d, noise=%.2f' % (N, noise),
+    fun.plot_surf(x_mesh, y_mesh, z_mesh, 'x', 'y', 'z', 'Franke function, $N$=%d, noise=%.2f' % (N, noise),
                   'franke_n%d' % N, fig_path, run_mode, zlim=[-0.10, 1.40])
 
     # Ordinary Least Squares
@@ -478,7 +481,7 @@ if run_mode == 'f':
     fun.plot_terrain(z_mesh, 'Terrain, location [%d, %d] to [%d, %d]' % (loc_s[0], loc_s[1], loc_e[0], loc_e[1]),
                      'terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]), fig_path, run_mode)
 
-    fun.plot_surf(y_mesh, x_mesh, z_mesh, 'x', 'y', 'Terrain, $N$=%d' % N,
+    fun.plot_surf(y_mesh, x_mesh, z_mesh, 'x', 'y', 'z', 'Terrain, $N$=%d' % N,
                   'surf_terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]), fig_path, run_mode)
 
     plt.show()

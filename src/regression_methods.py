@@ -5,7 +5,6 @@ import functions as fun
 class OrdinaryLeastSquares:
     def __init__(self, method=5):
         self.beta = None
-        self.ytilde = None
         self.method = method  # for testing fit
 
     def fit(self, X, y):
@@ -38,8 +37,7 @@ class OrdinaryLeastSquares:
         sigma2 = 1/(N-p-1) * np.sum((y - ytilde)**2)
         var_beta = np.sqrt(np.diagonal(np.linalg.pinv(X.T @ X))) * sigma2
 
-        print(sigma2, var_beta)
-        conf = 2*np.sqrt(var_beta)
+        conf = 2*np.sqrt(var_beta)  # 2 sigma is ~95.45% confidence intervals
 
         return conf
 
@@ -47,7 +45,6 @@ class OrdinaryLeastSquares:
 class RidgeRegression:
     def __init__(self):
         self.beta = None
-        self.ytilde = None
         self.lmb = None
 
     def set_lambda(self, lmb):
@@ -62,12 +59,13 @@ class RidgeRegression:
         return ytilde
 
     def confidence_interval_beta(self, X, y, ytilde):
-        # TODO: add lambda dependency
         N = X.shape[0]
         p = X.shape[1]
+        I = np.identity(X.shape[1])
 
-        sigma2 = 1/(N-p-1)*np.sum((y-ytilde)**2)
-        var_beta = np.diagonal(np.linalg.pinv(X.T @ X)) * sigma2
+        sigma2 = 1/(N-p-1) * np.sum((y - ytilde)**2)
+        var_beta = np.sqrt(np.diagonal(np.linalg.pinv(X.T @ X + self.lmb*I) @ X.T @ X @ (np.linalg.pinv(X.T @ X + self.lmb*I)).T)) * sigma2
+
         conf = 2*np.sqrt(var_beta)
 
         return conf

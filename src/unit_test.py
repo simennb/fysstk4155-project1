@@ -40,12 +40,6 @@ def test_bootstrap(fig_path):
 
     start_lecture = time.time()
     for degree in range(maxdegree):
-        X_train = np.zeros((len(x_train), degree+1))
-        X_test = np.zeros((len(x_test), degree+1))
-        for p in range(0, degree+1):
-            X_train[:, p] = x_train[:, 0]**p
-            X_test[:, p] = x_test[:, 0]**p
-
         # From lecture slides
         y_pred = np.empty((y_test.shape[0], n_boostraps))
         tot_unique = np.zeros(n_boostraps)
@@ -93,7 +87,7 @@ def test_bootstrap(fig_path):
         # Bootstrap from resampling_methods.py
         OLS = reg.OrdinaryLeastSquares()
         bs = res.Bootstrap(X_train, X_test, y_train[:, 0], y_test, OLS, fun.mean_squared_error)
-        mean_TEST, var_TEST, bias_TEST = bs.compute(n_boostraps)
+        mean_TEST, bias_TEST, var_TEST = bs.compute(n_boostraps)
         bs_error[degree] = mean_TEST
         bs_bias[degree] = bias_TEST
         bs_variance[degree] = var_TEST

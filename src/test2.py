@@ -36,7 +36,7 @@ X = create_X(x, y, n=p)
 print(X)
 '''
 
-p = 6
+p = 15
 #print('Morten:')
 morten = []
 for i in range(1, p + 1):

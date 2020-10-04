@@ -1,0 +1,5 @@
+Input which part of the program to run:
+Franke function: a/b/c/d/e
+Terrain data: f/g
+Run mode: Terrain datafile: SRTM_data_Norway_3.tif
+Patch location: [x, y] start =  [880, 2920]  end =  [1030, 3070]

@@ -42,8 +42,8 @@ test_size = 0.2
 fig_path = '../figures/'
 data_path = '../datafiles/'
 
-reg_g = 'OLS'
-#reg_g = 'Ridge'
+#reg_g = 'OLS'
+reg_g = 'Ridge'
 #reg_g = 'Lasso'
 
 OLSmethod = 5
@@ -100,13 +100,15 @@ if run_mode == 'a':
     # Ordinary Least Squares
     OLS = reg.OrdinaryLeastSquares()
     betaOLS = OLS.fit(X_train_scaled, z_train)
-    ztildeOLS = OLS.predict(X_test_scaled)
+    z_pred = OLS.predict(X_test_scaled)
+    z_fit = OLS.predict(X_train_scaled)
 
     # Printing MSE and R2 score
-    fun.print_MSE_R2(z_test, ztildeOLS, 'test', 'OLS')
+    fun.print_MSE_R2(z_test, z_pred, 'test', 'OLS')
+    fun.print_MSE_R2(z_train, z_fit, 'train', 'OLS')
 
     # Confidence interval for beta
-    conf = OLS.confidence_interval_beta(X_test, z_test, ztildeOLS)
+    conf = OLS.confidence_interval_beta(X_test, z_test, z_pred)
     fun.plot_confidence_int(betaOLS, conf, 'OLS', fig_path, run_mode)
     plt.show()
 
@@ -295,7 +297,7 @@ if run_mode == 'c':
 
 if run_mode == 'd':
     # Setting up for Ridge regression
-    nlambdas = 30  # 100
+    nlambdas = 20  # 100
     lambdas = np.logspace(-4, 1, nlambdas)
 
     # Bootstrap
@@ -419,23 +421,23 @@ if run_mode == 'd':
                            'Ridge regression, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (bs_best[1], N, N_bootstraps),
                            'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
 
-    fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Bootstrap $\lambda$ value at min(error)',
+    fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Minimum MSE, Bootstrap',
                            'bootstrap', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Ridge, MSE',
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Ridge',
                      'bs_ridge_error', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + Ridge, bias',
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + Ridge',
                      'bs_ridge_bias', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + Ridge, variance',
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + Ridge',
                      'bs_ridge_variance', fig_path, run_mode)
 
     # Cross-Validation Plots
-    fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'CV $\lambda$ value at min(error)',
+    fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'Minimum MSE, CV',
                            'cv', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + Ridge, MSE',
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + Ridge',
                      'cv_ridge_error', fig_path, run_mode)
 
     # MSE train test plots
@@ -465,7 +467,7 @@ if run_mode == 'd':
 if run_mode == 'e':
     # Lambdas / alphas for LASSO regression
     nlambdas = 15#30  # 100
-    lambdas = np.logspace(-4, 1, nlambdas)
+    lambdas = np.logspace(-4, -1, nlambdas)
 
     # Bootstrap and cross-validation
     N_bootstraps = int(N/2)
@@ -480,19 +482,23 @@ if run_mode == 'e':
     X_scaled = fun.scale_X(X)
 
     # Bootstrap arrays
-    bs_error_Lasso = np.zeros((p, nlambdas))
-    bs_bias_Lasso = np.zeros((p, nlambdas))
-    bs_var_Lasso = np.zeros((p, nlambdas))
+    bs_error_train = np.zeros((p, nlambdas))
+    bs_error_test = np.zeros((p, nlambdas))
+    bs_bias = np.zeros((p, nlambdas))
+    bs_var = np.zeros((p, nlambdas))
 
-    bs_error_optimal = np.zeros(p)
-    bs_bias_optimal = np.zeros(p)
-    bs_var_optimal = np.zeros(p)
-    bs_lmb_optimal = np.zeros(p)
+    bs_error_train_opt = np.zeros(p)
+    bs_error_test_opt = np.zeros(p)
+    bs_bias_opt = np.zeros(p)
+    bs_var_opt = np.zeros(p)
+    bs_lmb_opt = np.zeros(p)
 
     # Cross-validation arrays
-    cv_error_Lasso = np.zeros((p, nlambdas))
-    cv_error_optimal = np.zeros(p)
-    cv_lmb_optimal = np.zeros(p)
+    cv_error_train = np.zeros((p, nlambdas))
+    cv_error_test = np.zeros((p, nlambdas))
+    cv_error_train_opt = np.zeros(p)
+    cv_error_test_opt = np.zeros(p)
+    cv_lmb_opt = np.zeros(p)
 
     polydegree = np.arange(1, p + 1)
     for degree in range(1, p + 1):
@@ -509,26 +515,96 @@ if run_mode == 'e':
 
         for i in range(nlambdas):
             lmb = lambdas[i]
-            Lasso = skl.Lasso(alpha=lmb, max_iter=100000)
+            Lasso = skl.Lasso(alpha=lmb, max_iter=50000)
 
             if i % 10 == 0:
                 print('i = %d, lmb= %.3e' % (i, lmb))
 
             # Bootstrap
             BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, Lasso, fun.mean_squared_error)
-            error_, bias_, var_ = BS.compute(N_bootstraps)
-            bs_error_Lasso[degree-1, i] = error_
-            bs_bias_Lasso[degree-1, i] = bias_
-            bs_var_Lasso[degree-1, i] = var_
+            error_, bias_, var_, trainE_ = BS.compute(N_bootstraps)
+            bs_error_test[degree-1, i] = error_
+            bs_bias[degree-1, i] = bias_
+            bs_var[degree-1, i] = var_
+            bs_error_train[degree-1, i] = trainE_
 
             # Cross validation
             CV = res.CrossValidation(X_cv, z_ravel, Lasso, fun.mean_squared_error)
-            cv_error_Lasso[degree-1, i] = CV.compute(K)
+            trainE, testE = CV.compute(K)
+            cv_error_train[degree-1, i] = trainE
+            cv_error_test[degree-1, i] = testE
 
-    fun.plot_heatmap(lambdas, polydegree, bs_error_Lasso, 'Bootstrap + Lasso, MSE',
+        # Locating minimum MSE for each polynomial degree
+        # Bootstrap
+        index_bs = np.argmin(bs_error_test[degree - 1, :])
+        bs_lmb_opt[degree - 1] = lambdas[index_bs]
+
+        # Cross-validation
+        index_cv = np.argmin(cv_error_test[degree - 1, :])
+        cv_lmb_opt[degree - 1] = lambdas[index_cv]
+
+    # Locate minimum MSE  to see how it depends on lambda
+    bs_min = np.unravel_index(np.argmin(bs_error_test), bs_error_test.shape)
+    cv_min = np.unravel_index(np.argmin(cv_error_test), cv_error_test.shape)
+    bs_best = [polydegree[bs_min[0]], lambdas[bs_min[1]]]
+    cv_best = [polydegree[cv_min[0]], lambdas[cv_min[1]]]
+
+    # Bootstrap
+    bs_error_train_opt[:] = bs_error_train[:, bs_min[1]]
+    bs_error_test_opt[:] = bs_error_test[:, bs_min[1]]
+    bs_bias_opt[:] = bs_bias[:, bs_min[1]]
+    bs_var_opt[:] = bs_var[:, bs_min[1]]
+
+    # Cross-validation
+    cv_error_train_opt[:] = cv_error_train[:, cv_min[1]]
+    cv_error_test_opt[:] = cv_error_test[:, cv_min[1]]
+
+    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], 'Bootstrap p=%d' % bs_best[0],
+                        'bootstrap_p%d' % bs_best[0], fig_path, run_mode, fs=14)
+
+    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], 'Cross-validation p=%d' % cv_best[0],
+                        'cv_p%d' % cv_best[0], fig_path, run_mode, fs=14)
+
+    # Bootstrap Plots
+    #    fun.plot_bias_variance(polydegree, bs_error_test[:, bs_min_error[1]], bs_bias[:, bs_min_error[1]], bs_var[:, bs_min_error[1]],
+    fun.plot_bias_variance(polydegree, bs_error_test_opt, bs_bias_opt, bs_var_opt,
+                           'Lasso regression, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (bs_best[1], N, N_bootstraps),
+                           'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
+
+    fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Minimum MSE, Bootstrap',
+                           'bootstrap', fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Lasso',
                      'bs_lasso_error', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, cv_error_Lasso, 'Cross-validation + Lasso, MSE',
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + Lasso',
+                     'bs_lasso_bias', fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + Lasso',
+                     'bs_lasso_variance', fig_path, run_mode)
+
+    # Cross-Validation Plots
+    fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'Minimum MSE, CV',
+                           'cv', fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + Lasso',
+                     'cv_lasso_error', fig_path, run_mode)
+
+    # MSE train test plots
+    fun.plot_MSE_train_test(polydegree, cv_error_train_opt, cv_error_test_opt,
+                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
+                            'p%d_lmb%.2e_n%d_ts%.2f' % (cv_best[0], cv_best[1], N, test_size),
+                            fig_path, run_mode, resample='CV')
+
+    fun.plot_MSE_train_test(polydegree, bs_error_train_opt, bs_error_test_opt,
+                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
+                            'p%d_lmb%.2e_n%d_ts%.2f' % (bs_best[0], bs_best[1], N, test_size),
+                            fig_path, run_mode, resample='Bootstrap')
+
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Lasso',
+                     'bs_lasso_error', fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'Cross-validation + Lasso',
                      'cv_lasso_error', fig_path, run_mode)
 
     plt.show()
@@ -539,7 +615,7 @@ if data == 'terrain':
     # (3601, 1801) dimensions of image
     # Maybe make a size_x, size_y
     # [start_x, start_y, size]
-    patches = {1:[880, 2920, 150]}
+    patches = {1: [880, 2920, 150]}
     patch = 1
 
     n_terrain = patches[patch][2]
@@ -580,13 +656,18 @@ if run_mode == 'f':
 
 
 if run_mode == 'g':
-    if reg_g == 'Ridge' or reg_g == 'Lasso':
-        # Lambdas / alphas for LASSO regression
-        nlambdas = 15  # 30  # 100
-        lambdas = np.logspace(-4, 1, nlambdas)
-    elif reg_g == 'OLS':
+    if reg_g == 'OLS':
+        # Setting to 1 for OLS
         nlambdas = 1
         lambdas = np.zeros(1)
+    elif reg_g == 'Ridge':
+        # Lambdas for Ridge regression
+        nlambdas = 15  # 30  # 100
+        lambdas = np.logspace(-4, 1, nlambdas)
+    elif reg_g == 'Lasso':
+        # Lambdas / alphas for Lasso regression
+        nlambdas = 15  # 30  # 100
+        lambdas = np.logspace(-4, 1, nlambdas)
 
     # Bootstrap and cross-validation
     N_bootstraps = 100  # int(N/2)
@@ -598,20 +679,28 @@ if run_mode == 'g':
     X_test_scaled = fun.scale_X(X_test, scale)
     X_scaled = fun.scale_X(X, scale)
 
-    # Bootstrap train test error
-    error_train_BS = np.zeros((p, nlambdas))
-    error_test_BS = np.zeros((p, nlambdas))
+    # Bootstrap arrays
+    bs_error_train = np.zeros((p, nlambdas))
+    bs_error_test = np.zeros((p, nlambdas))
+    bs_bias = np.zeros((p, nlambdas))
+    bs_var = np.zeros((p, nlambdas))
 
-    # Bias, variance bootstrap
-    error_BS = np.zeros((p, nlambdas))
-    bias_BS = np.zeros((p, nlambdas))
-    var_BS = np.zeros((p, nlambdas))
+    bs_error_train_opt = np.zeros(p)
+    bs_error_test_opt = np.zeros(p)
+    bs_bias_opt = np.zeros(p)
+    bs_var_opt = np.zeros(p)
+    bs_lmb_opt = np.zeros(p)
 
-    # Cross-validation train test error
-    error_train_CV = np.zeros((p, nlambdas))
-    error_test_CV = np.zeros((p, nlambdas))
+    # Cross-validation arrays
+    cv_error_train = np.zeros((p, nlambdas))
+    cv_error_test = np.zeros((p, nlambdas))
+    cv_error_train_opt = np.zeros(p)
+    cv_error_test_opt = np.zeros(p)
+    cv_lmb_opt = np.zeros(p)
 
     # Setting up regression object to be used for regression
+    reg_obj = reg.OrdinaryLeastSquares(OLSmethod)  # default
+
     if reg_g == 'OLS':
 #        reg_obj = reg.OrdinaryLeastSquares(OLSmethod)
         reg_obj = skl.LinearRegression()  # Testing with SKL OLS
@@ -624,13 +713,13 @@ if run_mode == 'g':
         print('p = %2d, np = %3d' % (degree, n_poly))
 
         # Setting up correct design matrices for the polynomial degree
-        X_train_BS = np.zeros((len(X_train_scaled), n_poly))
-        X_test_BS = np.zeros((len(X_test_scaled), n_poly))
-        X_CV = np.zeros((len(X_scaled), n_poly))
+        X_train_bs = np.zeros((len(X_train_scaled), n_poly))
+        X_test_bs = np.zeros((len(X_test_scaled), n_poly))
+        X_cv = np.zeros((len(X_scaled), n_poly))
 
-        X_train_BS[:, :] = X_train_scaled[:, 0:n_poly]
-        X_test_BS[:, :] = X_test_scaled[:, 0:n_poly]
-        X_CV[:, :] = X_scaled[:, 0:n_poly]
+        X_train_bs[:, :] = X_train_scaled[:, 0:n_poly]
+        X_test_bs[:, :] = X_test_scaled[:, 0:n_poly]
+        X_cv[:, :] = X_scaled[:, 0:n_poly]
 
         # Looping over all the lambda values
         for i in range(nlambdas):
@@ -645,51 +734,91 @@ if run_mode == 'g':
                 reg_obj = skl.Lasso(alpha=lmb, max_iter=100000)
 
             # Bootstrap
-            BS = res.Bootstrap(X_train_BS, X_test_BS, z_train, z_test, reg_obj, fun.mean_squared_error)
-            error_, bias_, var_, error_train = BS.compute(N_bootstraps)
-            error_BS[degree-1, i] = error_
-            bias_BS[degree-1, i] = bias_
-            var_BS[degree-1, i] = var_
-
-            error_train_BS[degree-1, i] = error_train
-            error_test_BS[degree-1, i] = error_
+            BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, reg_obj, fun.mean_squared_error)
+            error_, bias_, var_, trainE_ = BS.compute(N_bootstraps)
+            bs_error_test[degree-1, i] = error_
+            bs_bias[degree-1, i] = bias_
+            bs_var[degree-1, i] = var_
+            bs_error_train[degree-1, i] = trainE_
 
             # Cross validation
-            CV = res.CrossValidation(X_CV, z, reg_obj, fun.mean_squared_error)
+            CV = res.CrossValidation(X_cv, z, reg_obj, fun.mean_squared_error)
             trainE, testE = CV.compute(K)
-            error_train_CV[degree-1, i] = trainE
-            error_test_CV[degree-1, i] = testE
+            cv_error_train[degree-1, i] = trainE
+            cv_error_test[degree-1, i] = testE
 
-#        betaOLS = OLS.fit(X_train_bs, z_train)
-#        z_fit = OLS.predict(X_train_bs)
-#        z_predict = OLS.predict(X_test_bs)
+        # Locating minimum MSE for each polynomial degree
+        # Bootstrap
+        index_bs = np.argmin(bs_error_test[degree - 1, :])
+        bs_lmb_opt[degree - 1] = lambdas[index_bs]
 
-#        error_train_OLS[degree-1] = fun.mean_squared_error(z_train, z_fit)
-#        error_test_OLS[degree-1] = fun.mean_squared_error(z_test, z_predict)
-
-        # Cross-Validation
-#        X_cv = np.zeros((len(X_scaled), n_poly))
-#        X_cv[:, :] = X_scaled[:, 0:n_poly]
-
-#        CV = res.CrossValidation(X_cv, z_ravel, OLS, fun.mean_squared_error)
-#        error_CV[degree-1] = CV.compute(K)
+        # Cross-validation
+        index_cv = np.argmin(cv_error_test[degree - 1, :])
+        cv_lmb_opt[degree - 1] = lambdas[index_cv]
 
         print('K-fold cross-validation:')
-        print('K=%d, MSE = %.5f' % (K, error_test_CV[degree-1, i]))
+        print('K=%d, MSE = %.5f' % (K, cv_error_test[degree - 1, i]))
 
-    fun.plot_MSE_train_test(polydegree, error_train_BS, error_test_BS,
-                            '%s, N = %d, $N_{BS}$ = %d' % (reg_g, N, N_bootstraps),
-                            '%s_patch%d_n%d_ts%.2f' % (reg_g, patch, N, test_size),
+    # Locate minimum MSE  to see how it depends on lambda
+    bs_min = np.unravel_index(np.argmin(bs_error_test), bs_error_test.shape)
+    cv_min = np.unravel_index(np.argmin(cv_error_test), cv_error_test.shape)
+    bs_best = [polydegree[bs_min[0]], lambdas[bs_min[1]]]
+    cv_best = [polydegree[cv_min[0]], lambdas[cv_min[1]]]
+
+    # Bootstrap
+    bs_error_train_opt[:] = bs_error_train[:, bs_min[1]]
+    bs_error_test_opt[:] = bs_error_test[:, bs_min[1]]
+    bs_bias_opt[:] = bs_bias[:, bs_min[1]]
+    bs_var_opt[:] = bs_var[:, bs_min[1]]
+
+    # Cross-validation
+    cv_error_train_opt[:] = cv_error_train[:, cv_min[1]]
+    cv_error_test_opt[:] = cv_error_test[:, cv_min[1]]
+
+    # Plotting
+    save = '%s_patch%d_N%d_Nbs%d_pmax%d_nlambdas%d' % (reg_g, patch, n_terrain, N_bootstraps, p, nlambdas)
+
+    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], 'Bootstrap p=%d' % bs_best[0],
+                        'bootstrap_p%d_%s' % (bs_best[0], save), fig_path, run_mode, fs=14)
+
+    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], 'Cross-validation p=%d' % cv_best[0],
+                        'cv_p%d_%s' % (cv_best[0], save), fig_path, run_mode, fs=14)
+
+    # Bootstrap Plots
+    #    fun.plot_bias_variance(polydegree, bs_error_test[:, bs_min_error[1]], bs_bias[:, bs_min_error[1]], bs_var[:, bs_min_error[1]],
+    fun.plot_bias_variance(polydegree, bs_error_test_opt, bs_bias_opt, bs_var_opt,
+                           '%s, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (reg_g, bs_best[1], N, N_bootstraps),
+                           'lmb_%.2e_%s' % (bs_best[1], save), fig_path, run_mode)
+
+    fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Minimum MSE, Bootstrap',
+                           'bootstrap_p%.2e_%s' % (bs_best[1], save), fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + %s' % reg_g,
+                     'bs_error_%s' % save, fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + %s' % reg_g,
+                     'bs_bias_%s' % save, fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + %s' % reg_g,
+                     'bs_variance_%s' % save, fig_path, run_mode)
+
+    # Cross-Validation Plots
+    fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'Minimum MSE, CV',
+                           'cv_lmb%.2e_%s' % (cv_best[1], save), fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + %s' % reg_g,
+                     'cv_error_%s' % save, fig_path, run_mode)
+
+    # MSE train test plots
+    fun.plot_MSE_train_test(polydegree, cv_error_train_opt, cv_error_test_opt,
+                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
+                            'p%d_lmb%.2e_n%d_ts%.2f' % (cv_best[0], cv_best[1], N, test_size),
+                            fig_path, run_mode, resample='CV')
+
+    fun.plot_MSE_train_test(polydegree, bs_error_train_opt, bs_error_test_opt,
+                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
+                            'p%d_lmb%.2e_n%d_ts%.2f' % (bs_best[0], bs_best[1], N, test_size),
                             fig_path, run_mode, resample='Bootstrap')
-#    fun.plot_MSE_train_test(polydegree, error_train_BS, error_test_BS, n_terrain, test_size, 0.0,
-#                            fig_path, run_mode)
 
-    fun.plot_bias_variance(polydegree, error_BS, bias_BS, var_BS,
-                           '%s, $N$=%d, $N_{bs}$=%d' % (reg_g, N, N_bootstraps),
-                           '%s_N%d_Nbs%d' % (reg_g, N, N_bootstraps), fig_path, run_mode)
-
-    fun.plot_multiple_y(polydegree, [error_train_CV, error_test_CV], ['train CV', 'test CV'],
-                        'Comparing different CV implementations',
-                        'Polynomial degree', 'Mean squared error', 'CV_p%d' % p, fig_path, run_mode)
 
     plt.show()

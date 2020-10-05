@@ -1,5 +1,16 @@
 Input which part of the program to run:
 Franke function: a/b/c/d/e
 Terrain data: f/g
-Run mode: Terrain datafile: SRTM_data_Norway_3.tif
-Patch location: [x, y] start =  [880, 2920]  end =  [1030, 3070]
+Run mode: Franke Function:
+Seed =  4155 
+N = 529 
+noise = 0.0500 
+p = 5 
+scale = [True, False] 
+test_size = 0.20
+
+Test MSE for OLS: 0.004674
+Test R2 for OLS: 0.929855
+
+Training MSE for OLS: 0.003334
+Training R2 for OLS: 0.949904

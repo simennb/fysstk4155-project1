@@ -7,6 +7,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 from sklearn.preprocessing import StandardScaler
 from imageio import imread
 import time
+from numba import jit
 
 
 ###########################################################
@@ -250,7 +251,7 @@ def plot_bias_variance(polydegree, error, bias, variance, title_mod, save, fig_p
     plt.plot(polydegree, variance, label='Variance')
     plt.xlabel('Polynomial degree', fontsize=fs)
     plt.ylabel('Mean squared error', fontsize=fs)
-    plt.title(r'Bias variance %s' % title_mod, fontsize=fs)
+    plt.title(r'%s' % title_mod, fontsize=fs)
     plt.grid('on')
     plt.legend()
     plt.ylim([0.0, 0.02])

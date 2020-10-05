@@ -40,8 +40,8 @@ class Bootstrap:
         y_train = self.y_train.reshape(-1, 1)
 
         for i in range(N_bootstraps):
-            if i % 10 == 0:
-                print('Bootstrap number: %d' % i)
+#            if i % 10 == 0:
+#                print('Bootstrap number: %d' % i)
             X_new, y_new = self.resample(self.X_train, self.y_train)
 #            X_new = fun.scale_X(X_new)
 #            X_new, y_new = resample(self.X_train, self.y_train)#, n_samples=N_bs)
@@ -272,6 +272,40 @@ class CrossValidation:
         y_test = y[test_indices]
 
         return X_train, X_test, y_train, y_test
+
+    def split_2(self, X, y, K):
+        # TODO: Check behavior compared to SKL kfold.split
+        # TODO: since not every number is neatly divisable with K
+        N = len(X)
+#        train_indices = np.zeros((N,), dtype=int)
+
+        for i in range(K):
+
+#        j = i*int(N/K)
+#        l = j + int(N/K)
+            j = int(i*N/K)  # TODO: check
+            l = j + int(N/K)
+
+#        print('Split #%d: N: %d, [%d : %d], %d' % (i, N, j, l, l-j))
+
+            indices = np.arange(N)
+            test_indices = indices[j:l]
+            mask = np.ones(N, dtype=bool)
+            mask[test_indices] = False
+            train_indices = indices[mask]
+
+        X_train = X[train_indices]
+        X_test = X[test_indices]
+#        print(X_train.shape, X_test.shape)
+#        print(test_indices)
+#        print('train ', X_train)
+#        print('test ', X_test)
+
+        y_train = y[train_indices]
+        y_test = y[test_indices]
+
+        return X_train, X_test, y_train, y_test
+
 
 
 class CrossValidationSKL:

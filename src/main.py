@@ -31,7 +31,7 @@ data = 'franke' if run_mode in ['a', 'b', 'c', 'd', 'e'] else None
 data = 'terrain' if run_mode in ['f', 'g'] else data
 
 # Common variables for both parts for easy adjusting
-p_dict = {'a': 5, 'b': 15, 'c': 5, 'd': 15,
+p_dict = {'a': 5, 'b': 15, 'c': 5, 'd': 20,
           'e': 10, 'f': 10, 'g': 15}
 scale_dict = {'a': [True, False], 'b': [True, False], 'c': [True, False], 'd': [True, False],
               'e': [True, False], 'f': [True, False], 'g': [True, False], 'h': [True, False]}
@@ -55,9 +55,11 @@ if data == 'franke':
     # Creating data set for the Franke function tasks
     seed = 4155
     np.random.seed(seed)
-    n_franke = 32  # number of samples of x/y
+#    n_franke = 32  # number of samples of x/y
+    n_franke = 23  # 529 points
     N = n_franke**2  # Total number of samples n*2
     noise = 0.05  # 2
+#    noise = 0.1  # 2
 #    noise = 0.8571
 
     # Randomly generated meshgrid
@@ -101,10 +103,9 @@ if run_mode == 'a':
     ztildeOLS = OLS.predict(X_test_scaled)
 
     # Printing MSE and R2 score
-    # TODO: maybe save results to file?
     fun.print_MSE_R2(z_test, ztildeOLS, 'test', 'OLS')
 
-    # Confidence interval TODO: fix comments
+    # Confidence interval for beta
     conf = OLS.confidence_interval_beta(X_test, z_test, ztildeOLS)
     fun.plot_confidence_int(betaOLS, conf, 'OLS', fig_path, run_mode)
     plt.show()
@@ -249,8 +250,10 @@ if run_mode == 'c':
     K = 5
 
     polydegree = np.arange(1, p + 1)
-    error_CV = np.zeros(len(polydegree))
-    error_SKL = np.zeros(len(polydegree))
+    error_train_CV = np.zeros(len(polydegree))
+    error_test_CV = np.zeros(len(polydegree))
+    error_train_SKL = np.zeros(len(polydegree))
+    error_test_SKL = np.zeros(len(polydegree))
 
     X_scaled = fun.scale_X(X, scale)
     OLS = reg.OrdinaryLeastSquares(OLSmethod)
@@ -262,30 +265,31 @@ if run_mode == 'c':
         X_cv[:, :] = X_scaled[:, 0:n_poly]
 
         CV = res.CrossValidation(X_cv, z_ravel, OLS, fun.mean_squared_error)
-        error_CV[degree-1] = CV.compute(K)
+        trainE, testE = CV.compute(K)
+        error_train_CV[degree-1] = trainE
+        error_test_CV[degree-1] = testE
 
         print('K-fold cross-validation:')
-        print('K=%d, MSE = %.5f' % (K, error_CV[degree-1]))
+        print('K=%d, MSE = %.5f' % (K, error_test_CV[degree-1]))
 
-        kfold = KFold(n_splits=K)
-    #    kfold = KFold(n_splits=K, random_state=None, shuffle=True)
-        for train_inds, test_inds in kfold.split(X):
-            X_train = X_cv[train_inds]
-            z_train = z_ravel[train_inds]
-
-            X_test = X_cv[test_inds]
-            z_test = z_ravel[test_inds]
-
-            betaOLS = OLS.fit(X_train, z_train)
-            z_testOLS = OLS.predict(X_test)
-
-            error_SKL[degree-1] += fun.mean_squared_error(z_test, z_testOLS) / K
+        CV_SKL = res.CrossValidationSKL(X_cv, z_ravel, OLS)
+        trainE, testE = CV_SKL.compute(K)
+        error_train_SKL[degree-1] = trainE
+        error_test_SKL[degree-1] = testE
 
         print('K-fold cross-validation SKL:')
-        print('K=%d, MSE = %.5f' % (K, error_SKL[degree-1]))
+        print('K=%d, MSE = %.5f' % (K, error_test_SKL[degree-1]))
 
-    fun.plot_multiple_y(polydegree, [error_CV, error_SKL], ['CV', 'SKL'], 'Comparing different CV implementations',
-                        'Polynomial degree', 'Mean squared error', 'compare_CV_SKL_p%d' % p, fig_path, run_mode)
+    fun.plot_multiple_y(polydegree, [error_test_CV, error_test_SKL], ['test CV', 'test SKL'],
+                        'Comparing different CV implementations', 'Polynomial degree', 'Mean squared error',
+                        'test_compare_CV_SKL_p%d' % p, fig_path, run_mode)
+
+    fun.plot_multiple_y(polydegree, [error_train_CV, error_train_SKL], ['train CV', 'train SKL'],
+                        'Comparing different CV implementations', 'Polynomial degree', 'Mean squared error',
+                        'train_compare_CV_SKL_p%d' % p, fig_path, run_mode)
+
+    # Suspect the difference lies in the splitting, which would be worth looking at
+
     plt.show()
 
 
@@ -295,7 +299,7 @@ if run_mode == 'd':
     lambdas = np.logspace(-4, 1, nlambdas)
 
     # Bootstrap
-    N_bootstraps = int(N/2)  # 100
+    N_bootstraps = 100  # int(N/2)  # 100
 
     # Cross-validation
     K = 5
@@ -314,21 +318,25 @@ if run_mode == 'd':
     polydegree = np.arange(1, p + 1)
 
     # Bootstrap arrays
-    bs_error_Ridge = np.zeros((p, nlambdas))
-    bs_bias_Ridge = np.zeros((p, nlambdas))
-    bs_var_Ridge = np.zeros((p, nlambdas))
+    bs_error_train = np.zeros((p, nlambdas))
+    bs_error_test = np.zeros((p, nlambdas))
+    bs_bias = np.zeros((p, nlambdas))
+    bs_var = np.zeros((p, nlambdas))
 
     # error/var/bias at the lambda that gives minimum
     # TODO: Though maybe a common value for them is correct to do?
-    bs_error_optimal = np.zeros(p)
-    bs_bias_optimal = np.zeros(p)
-    bs_var_optimal = np.zeros(p)
-    bs_lmb_optimal = np.zeros(p)
+    bs_error_train_opt = np.zeros(p)
+    bs_error_test_opt = np.zeros(p)
+    bs_bias_opt = np.zeros(p)
+    bs_var_opt = np.zeros(p)
+    bs_lmb_opt = np.zeros(p)
 
     # Cross-validation arrays
-    cv_error_Ridge = np.zeros((p, nlambdas))
-    cv_error_optimal = np.zeros(p)
-    cv_lmb_optimal = np.zeros(p)
+    cv_error_train = np.zeros((p, nlambdas))
+    cv_error_test = np.zeros((p, nlambdas))
+    cv_error_train_opt = np.zeros(p)
+    cv_error_test_opt = np.zeros(p)
+    cv_lmb_opt = np.zeros(p)
 #    test_Ridge = np.zeros((p, nlambdas))
 
     # Confidence intervals
@@ -357,70 +365,90 @@ if run_mode == 'd':
 
             # Bootstrap
             BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, Ridge, fun.mean_squared_error)
-            error_, bias_, var_ = BS.compute(N_bootstraps)
-            bs_error_Ridge[degree-1, i] = error_
-            bs_bias_Ridge[degree - 1, i] = bias_
-            bs_var_Ridge[degree-1, i] = var_
+            error_, bias_, var_, trainE_ = BS.compute(N_bootstraps)
+            bs_error_test[degree-1, i] = error_
+            bs_bias[degree - 1, i] = bias_
+            bs_var[degree-1, i] = var_
+            bs_error_train[degree-1, i] = trainE_
 
             # Cross validation
             CV = res.CrossValidation(X_cv, z_ravel, Ridge, fun.mean_squared_error)
-            cv_error_Ridge[degree-1, i] = CV.compute(K)
-
-            # Confidence interval Ridge
-#            Ridge.fit(X_train_bs, z_train)
-#            z_Ridge = Ridge.predict(X_test_bs)
-#            conf_int_Ridge[degree-1, i, 0:n_poly] = Ridge.confidence_interval_beta(X_test_bs, z_test, z_Ridge)
-
+            trainE, testE = CV.compute(K)
+            cv_error_train[degree-1, i] = trainE
+            cv_error_test[degree-1, i] = testE
 
 #        bs_error_optimal[degree-1] = np.min(bs_error_Ridge[degree-1, :])
 #        bs_var_optimal[degree-1] = np.min(bs_var_Ridge[degree-1, :])
 #        bs_bias_optimal[degree-1] = np.min(bs_bias_Ridge[degree-1, :])
 
+        # Locating minimum MSE for each polynomial degree
+
         # Bootstrap
-        index_bs = np.argmin(bs_error_Ridge[degree-1, :])
-        bs_lmb_optimal[degree-1] = lambdas[index_bs]
-        bs_error_optimal[degree-1] = bs_error_Ridge[degree-1, index_bs]
-        bs_bias_optimal[degree-1] = bs_bias_Ridge[degree-1, index_bs]
-        bs_var_optimal[degree-1] = bs_var_Ridge[degree-1, index_bs]
+        index_bs = np.argmin(bs_error_test[degree-1, :])
+        bs_lmb_opt[degree-1] = lambdas[index_bs]
 
         # Cross-validation
-        index_cv = np.argmin(cv_error_Ridge[degree-1, :])
-        cv_lmb_optimal[degree-1] = lambdas[index_cv]
-        cv_error_optimal[degree-1] = cv_error_Ridge[degree-1, index_cv]
+        index_cv = np.argmin(cv_error_test[degree-1, :])
+        cv_lmb_opt[degree-1] = lambdas[index_cv]
 
-    # Locate minimum MSE to see how it depends on lambda
-    bs_min_error = np.unravel_index(np.argmin(bs_error_Ridge), bs_error_Ridge.shape)
-    cv_min_error = np.unravel_index(np.argmin(cv_error_Ridge), cv_error_Ridge.shape)
+    # Locate minimum MSE  to see how it depends on lambda
+    bs_min = np.unravel_index(np.argmin(bs_error_test), bs_error_test.shape)
+    cv_min = np.unravel_index(np.argmin(cv_error_test), cv_error_test.shape)
+    bs_best = [polydegree[bs_min[0]], lambdas[bs_min[1]]]
+    cv_best = [polydegree[cv_min[0]], lambdas[cv_min[1]]]
 
-    fun.plot_lambda_mse(lambdas, bs_error_Ridge[bs_min_error[0], :], 'Bootstrap p=%d' % bs_min_error[0],
-                        'bootstrap_p%d' % bs_min_error[0], fig_path, run_mode, fs=14)
+    # Bootstrap
+    bs_error_train_opt[:] = bs_error_train[:, bs_min[1]]
+    bs_error_test_opt[:] = bs_error_test[:, bs_min[1]]
+    bs_bias_opt[:] = bs_bias[:, bs_min[1]]
+    bs_var_opt[:] = bs_var[:, bs_min[1]]
 
-    fun.plot_lambda_mse(lambdas, cv_error_Ridge[cv_min_error[0], :], 'Cross-validation p=%d' % cv_min_error[0],
-                        'cv_p%d' % cv_min_error[0], fig_path, run_mode, fs=14)
+    # Cross-validation
+    cv_error_train_opt[:] = cv_error_train[:, cv_min[1]]
+    cv_error_test_opt[:] = cv_error_test[:, cv_min[1]]
+
+    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], 'Bootstrap p=%d' % bs_best[0],
+                        'bootstrap_p%d' % bs_best[0], fig_path, run_mode, fs=14)
+
+    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], 'Cross-validation p=%d' % cv_best[0],
+                        'cv_p%d' % cv_best[0], fig_path, run_mode, fs=14)
 
     # Bootstrap Plots
-    fun.plot_bias_variance(polydegree, bs_error_optimal, bs_bias_optimal, bs_var_optimal,
-                           'Ridge regression, $N$=%d, $N_{bs}$=%d' % (N, N_bootstraps),
+#    fun.plot_bias_variance(polydegree, bs_error_test[:, bs_min_error[1]], bs_bias[:, bs_min_error[1]], bs_var[:, bs_min_error[1]],
+    fun.plot_bias_variance(polydegree, bs_error_test_opt, bs_bias_opt, bs_var_opt,
+                           'Ridge regression, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (bs_best[1], N, N_bootstraps),
                            'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
 
-    fun.plot_degree_lambda(polydegree, bs_lmb_optimal, 'Bootstrap $\lambda$ value at min(error)',
+    fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Bootstrap $\lambda$ value at min(error)',
                            'bootstrap', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_error_Ridge, 'Bootstrap + Ridge, MSE',
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Ridge, MSE',
                      'bs_ridge_error', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_bias_Ridge, 'Bootstrap + Ridge, bias',
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + Ridge, bias',
                      'bs_ridge_bias', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_var_Ridge, 'Bootstrap + Ridge, variance',
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + Ridge, variance',
                      'bs_ridge_variance', fig_path, run_mode)
 
     # Cross-Validation Plots
-    fun.plot_degree_lambda(polydegree, cv_lmb_optimal, 'CV $\lambda$ value at min(error)',
+    fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'CV $\lambda$ value at min(error)',
                            'cv', fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, cv_error_Ridge, 'CV + Ridge, MSE',
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + Ridge, MSE',
                      'cv_ridge_error', fig_path, run_mode)
+
+    # MSE train test plots
+    fun.plot_MSE_train_test(polydegree, cv_error_train_opt, cv_error_test_opt,
+                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
+                            'p%d_lmb%.2e_n%d_ts%.2f' % (cv_best[0], cv_best[1], N, test_size),
+                            fig_path, run_mode, resample='CV')
+
+    fun.plot_MSE_train_test(polydegree, bs_error_train_opt, bs_error_test_opt,
+                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
+                            'p%d_lmb%.2e_n%d_ts%.2f' % (bs_best[0], bs_best[1], N, test_size),
+                            fig_path, run_mode, resample='Bootstrap')
+
 
     # Confidence Interval plot for Ridge
     Ridge.set_lambda(1e-4)

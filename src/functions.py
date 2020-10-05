@@ -213,7 +213,7 @@ def plot_MSE_train_test(polydegree, train_MSE, test_MSE, title_mod, save, fig_pa
     plt.ylabel('Mean squared error', fontsize=fs)
 #    plt.yscale('log')
     plt.grid('on')
-    plt.tight_layout()
+#    plt.tight_layout()
     if resample is not None:
         plt.title(r'Train test MSE, %s, %s' % (resample, title_mod), fontsize=fs)
 #        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a*n_a, test_size, noise), fontsize=fs)
@@ -224,10 +224,6 @@ def plot_MSE_train_test(polydegree, train_MSE, test_MSE, title_mod, save, fig_pa
 #        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a*n_a, test_size, noise), fontsize=fs)
 #        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
         plt.savefig(fig_path+'task_%s/MSE_train_test_%s.png' % (task, save))
-#    plt.ylim([0, 0.025])
-#    plt.ylim([0.0, 0.02])
-
-    # TODO: add more sophisticated filename - figure out what variation we need plot wise
 
 
 def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise, OLSmethod, fs=14):
@@ -328,29 +324,25 @@ def plot_degree_lambda(polydegree, lambdas, title, save, fig_path, task, fs=14):
     plt.savefig(fig_path+'task_%s/degree_lambdas_%s.png' % (task, save))
 
 
-def plot_heatmap(x, y, z, title, save, fig_path, task, fs=14):
-    fig = plt.figure()
-#    heatmap = plt.pcolor(x, y, z)
-    heatmap = plt.pcolor(z)
-    fig.colorbar(heatmap)
-    loc, labels = plt.xticks()
-    step = int(loc[1]-loc[0])
-    locx = loc + step/2
-    print(locx, labels)
-    plt.xticks(loc, ['%.2e' % x[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
+def plot_heatmap(x, y, z, zlab, title, save, fig_path, task, fs=14):
+    fig, ax = plt.subplots()
 
-    loc, labels = plt.yticks()
-    #locy = loc + (loc[1]-loc[0])/2
-    step = int(loc[1]-loc[0])
-    locy = loc + step/2
+    heatmap = ax.pcolor(z)
+    cbar = plt.colorbar(heatmap, ax=ax)
 
-    plt.yticks(loc, ['%d' % y[int(i)] for i in range(int(loc[0]), int(loc[-1]), step)], rotation=90)
+    step = 2
+    xticks = ['%1.2e' % x[i] for i in range(0, len(x), step)]
+    yticks = ['%d' % y[i] for i in range(0, len(y), step)]
 
-#    ax.set_xticks(np.arange(z.shape[0]) + .5, minor=False)
-#    ax.set_yticks(np.arange(z.shape[1]) + .5, minor=False)
-    plt.xlabel(r'$\lambda$', fontsize=fs)
-    plt.ylabel('Polynomial degree', fontsize=fs)
-    plt.title(title, fontsize=fs)
+    ax.set_xticks(np.arange(0, z.shape[1], step) + 0.5, minor=False)
+    ax.set_yticks(np.arange(0, z.shape[0], step) + 0.5, minor=False)
+    ax.set_xticklabels(xticks, rotation=90, fontsize=10)#fs-4)
+    ax.set_yticklabels(yticks, fontsize=10)#fs-4)
+
+    cbar.ax.set_title(zlab, fontsize=fs)
+    ax.set_xlabel(r'$\lambda$', fontsize=fs)
+    ax.set_ylabel('Polynomial degree', fontsize=fs)
+    ax.set_title(title, fontsize=fs)
     plt.tight_layout()
     plt.savefig(fig_path+'task_%s/heatmap_%s.png' % (task, save))
     # TODO: better filename

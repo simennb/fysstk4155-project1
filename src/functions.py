@@ -13,14 +13,14 @@ from numba import jit
 ###########################################################
 def timeit(method):
     def timed(*args, **kw):
-        ts = time.time()
+        t_start = time.time()
         result = method(*args, **kw)
-        te = time.time()
+        t_end = time.time()
         if 'log_time' in kw:
             name = kw.get('log_name', method.__name__.upper())
-            kw['log_time'][name] = int((te - ts) * 1000)
+            kw['log_time'][name] = int((t_end - t_start))
         else:
-            print('%r  %2.2f ms' % (method.__name__, (te - ts) * 1000))
+            print('%r  %.4f ms' % (method.__name__, t_end - t_start))
         return result
     return timed
 
@@ -288,24 +288,12 @@ def plot_confidence_int(beta, conf, method, fig_path, task, fs=14):
     plt.savefig(fig_path + 'task_%s/beta_conf_int_n%d_%s.png' % (task, n, method))
 
 
-def plot_multiple_y(x, y, label, title, xlabel, ylabel, save, fig_path, task, fs=14):
-    """
-    :param x:
-    :param y: list of elements to plot y-axis
-    :param label: list of strings
-    :param title: string
-    :param xlabel: string
-    :param ylabel: string
-    :param fig_path:
-    :param run_mode:
-    :param fs:
-    :return:
-    """
+def plot_multiple_y(x, y, label, title, xlab, ylab, save, fig_path, task, fs=14):
     fig = plt.figure()
     for i in range(len(y)):
         plt.plot(x, y[i], label=label[i])
-    plt.xlabel(xlabel, fontsize=fs)
-    plt.ylabel(ylabel, fontsize=fs)
+    plt.xlabel(xlab, fontsize=fs)
+    plt.ylabel(ylab, fontsize=fs)
     plt.legend()
     plt.grid('on')
     plt.title(title, fontsize=fs)
@@ -337,8 +325,8 @@ def plot_heatmap(x, y, z, zlab, title, save, fig_path, task, fs=14):
 
     ax.set_xticks(np.arange(0, z.shape[1], step) + 0.5, minor=False)
     ax.set_yticks(np.arange(0, z.shape[0], step) + 0.5, minor=False)
-    ax.set_xticklabels(xticks, rotation=90, fontsize=10)#fs-4)
-    ax.set_yticklabels(yticks, fontsize=10)#fs-4)
+    ax.set_xticklabels(xticks, rotation=90, fontsize=10)
+    ax.set_yticklabels(yticks, fontsize=10)
 
     cbar.ax.set_title(zlab, fontsize=fs)
     ax.set_xlabel(r'$\lambda$', fontsize=fs)
@@ -371,7 +359,6 @@ def plot_surf(x, y, z, xlab, ylab, zlab, title, save, fig_path, task, zlim=None,
 
     plt.xlabel(r'%s' % xlab, fontsize=fs)
     plt.ylabel(r'%s' % ylab, fontsize=fs)
-#    plt.zlabel(r'%s' % xlab, fontsize=fs)
     plt.title(r'%s' % title, fontsize=fs)
 
     # Customize the z axis.
@@ -381,8 +368,8 @@ def plot_surf(x, y, z, xlab, ylab, zlab, title, save, fig_path, task, zlim=None,
     ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
     # Add a color bar which maps values to colors.
-    fig.colorbar(surf, shrink=0.5, aspect=5)
-    # TODO SET COLORBAR LABEL
+    cbar = fig.colorbar(surf, shrink=0.5, aspect=5, ax=ax)
+    cbar.ax.set_title(r'%s' % zlab, fontsize=fs)
     plt.tight_layout()
     plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
 

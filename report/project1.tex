@@ -266,12 +266,46 @@ Similarly, the variance for $\beta$ for Ridge regression can be found to be
 and confidence interval can be constructed following the same steps as done above for OLS.% the same way as above for OLS.
 
 \subsection{Resampling methods}
+In order to assess our models
 \subsubsection{Bootstrap}
+The basic concept of the Bootstrap resampling method is to create new data sets by drawing samples (with replacement) from the training data set. Algorithm \ref{alg:bootstrap} shows the Bootstrap method given a data set $\mathcal{L}$ consisting of the data $\XX_{\mathcal{L}} = \{(y_j, \bm{x}_j), j= 0 \,...\, n-1\}$
+\begin{algorithm}[H]
+\caption{Bootstrap}
+\begin{algorithmic}[1]
+\State Split the data set $\XX_{\mathcal{L}}$ into training $\XX_{\mathcal{L},\text{train}}$ and test data sets $\XX_{\mathcal{L},\text{test}}$
+\For{$i = 0$, $N_{\text{bs}}-1$}
+\State Create a new data set $\XX_{\mathcal{L},i}$by drawing samples with replacement from  $\XX_{\mathcal{L},\text{train}}$.
+\State Fit the model using $\XX_{\mathcal{L},i}$.
+\State Evaluate the model on the test set $\XX_{\mathcal{L},\text{test}}$ and store the results.
+\EndFor
+\State Assess the model by looking at the distribution of computed quantities, for example looking at the mean of the MSE.
+\end{algorithmic}
+\label{alg:bootstrap}
+\end{algorithm}
+
 \subsubsection{Cross-validation}
+Cross-validation is a resampling method where (in the case of $k$-fold CV) the data set is split into $k$-folds of training and test data sets. Algorithm \ref{alg:cv} shows the standard $k$-fold cross-validation.
+\begin{algorithm}[H]
+\caption{$k$-fold Cross-Validation}
+\begin{algorithmic}[1]
+\State Shuffle the data set $\XX_{\mathcal{L}}$ randomly.
+\State Split the data set $\XX_{\mathcal{L}}$ into $k$ folds/subsets $\{\XX_{\mathcal{L},i}, i=0\,...\,k-1\}$.
+\For{$i = 0$, $k-1$}
+\State Set $\XX_{\mathcal{L},i}$ as the test data set and the rest of the folds as the training set.
+\State Fit the model using the training data set as defined above.
+\State Evaluate the model on the $i$-th test set $\XX_{\mathcal{L},i}$ and store the results.
+\EndFor
+\State Assess the model by looking at the distribution of computed quantities.%, for example looking at the mean of the MSE.
+\end{algorithmic}
+\label{alg:cv}
+\end{algorithm}
+%If we had
 
 \section{Implementation} \label{chap:implement}
 The heart. \cite{Github1}
 
+\red{maybe conclusion? WE REWROTE THE CODE ON ROCK AND ROLL}
+The code as it stands is divided into sections based on the different tasks in the project. A better approach, would probably have been to combine all the regression and resampling into a single code section, and rather have the run modes determining which parameters and regression methods are used and what is plotted. This is essentially how the section for the terrain data currently is operating. This would help a lot with reducing the total amount of code needed, and also making it easier to fix issues since there is only one section of the code that is computing the regression, and not multiple.
 \section{Results} \label{chap:results}
 
 \section{Discussion} \label{chap:discussion}
@@ -279,6 +313,7 @@ The heart. \cite{Github1}
 \section{Conclusion} \label{chap:conclusion}
 Introduce why we set out, then explain results
 
+no idea why problems are, but the way the code is structured, sadly makes debugging slow.
 
 \bibliography{references}
 \appendix

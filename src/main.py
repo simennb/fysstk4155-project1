@@ -1,20 +1,18 @@
-# from functions import *
 import functions as fun
 import regression_methods as reg
 import resampling_methods as res
-import os
-import sys
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold
 import sklearn.linear_model as skl
+import sys
+
+import os
+import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 from sklearn.utils import resample
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 # TODO: Clean up imports
@@ -32,7 +30,8 @@ data = 'franke' if run_mode in ['a', 'b', 'c', 'd', 'e'] else None
 data = 'terrain' if run_mode in ['f', 'g'] else data
 
 # Common variables for both parts for easy adjusting
-p_dict = {'a': 5, 'b': 15, 'c': 5, 'd': 20,
+# Most of the parameters that can be adjusted will be inside the if-test corresponding to the task
+p_dict = {'a': 5, 'b': 20, 'c': 5, 'd': 20,
           'e': 10, 'f': 1, 'g': 15}
 scale_dict = {'a': [True, False], 'b': [True, False], 'c': [True, False], 'd': [True, False],
               'e': [True, False], 'f': None, 'g': [True, False]}
@@ -43,12 +42,19 @@ test_size = 0.2
 fig_path = '../figures/'
 data_path = '../datafiles/'
 
+write_path = '../datafiles/'
+#write_path = '../benchmarks/'  # to write benchmarks
+
+
 #reg_g = 'OLS'
+#reg_g = 'SKL'
 reg_g = 'Ridge'
 #reg_g = 'Lasso'
 
-OLSmethod = 5
+method = 5  # OLS method (check regression_methods.py)
 
+
+########################################################################################################################
 if data == 'franke':
     # Creating data set for the Franke function tasks
     seed = 4155
@@ -82,6 +88,7 @@ if data == 'franke':
     fun.print_parameters_franke(seed, N, noise, p, scale, test_size)
 
 
+########################################################################################################################
 if data == 'terrain':
     terrain_data = 'SRTM_data_Norway_3.tif'
     # (3601, 1801) dimensions of image
@@ -114,16 +121,17 @@ if data == 'terrain':
     print('Terrain datafile: %s' % terrain_data)
     print('Patch location: [x, y] start = ', loc_s, ' end = ', loc_e)
 
-# Major restructuring of code in hopes of making it easier to find errors
+########################################################################################################################
 @fun.timeit
-def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, scale, max_iter=50000):
+def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, scale, method=5, max_iter=50000):
     """
     Runs the selected regression methods for the input design matrix, p's, lambdas, and using
     the resampling methods as specified.
     While there may be several ways I could have done this more optimally, this function exists
     because a rather late attempt at restructuring the code in order to reduce the amount of duplicate
     lines of code regarding regression, that had just escalated out of control, making it extremely
-    difficult to debug and finding whatever was (and maybe is?) causing all the issues.
+    difficult to debug and finding whatever was causing all the issues.
+    Turns out the real error was all the friends we made along the way.
     :param X:
     :param z:
     :param reg_string:
@@ -154,23 +162,22 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
     bs_bias = np.zeros((p, nlambdas))
     bs_var = np.zeros((p, nlambdas))
 
-    bs_error_train_opt = np.zeros(p)
-    bs_error_test_opt = np.zeros(p)
-    bs_bias_opt = np.zeros(p)
-    bs_var_opt = np.zeros(p)
+    bs_error_train_opt = np.zeros((p, 2))
+    bs_error_test_opt = np.zeros((p, 2))
+    bs_bias_opt = np.zeros((p, 2))  # First index is min(MSE) lmb for each p, second at lmb that yields total lowest MSE
+    bs_var_opt = np.zeros((p, 2))
     bs_lmb_opt = np.zeros(p)
 
     # Cross-validation arrays
     cv_error_train = np.zeros((p, nlambdas))
     cv_error_test = np.zeros((p, nlambdas))
-    cv_error_train_opt = np.zeros(p)
-    cv_error_test_opt = np.zeros(p)
+    cv_error_train_opt = np.zeros((p, 2))
+    cv_error_test_opt = np.zeros((p, 2))
     cv_lmb_opt = np.zeros(p)
 
     # Setting up regression object to be used for regression
-    reg_obj = reg.OrdinaryLeastSquares()  # default
+    reg_obj = reg.OrdinaryLeastSquares(method)  # default
     if reg_string == 'SKL':
-        # TODO: Remove, 99% sure results with my OLS is accurate
         reg_obj = skl.LinearRegression()  # Testing with SKL OLS
     elif reg_string == 'Ridge':
         reg_obj = reg.RidgeRegression()
@@ -218,10 +225,16 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
         # Bootstrap
         index_bs = np.argmin(bs_error_test[degree - 1, :])
         bs_lmb_opt[degree - 1] = lambdas[index_bs]
+        bs_error_train_opt[:, 0] = bs_error_train[:, index_bs]
+        bs_error_test_opt[:, 0] = bs_error_test[:, index_bs]
+        bs_bias_opt[:, 0] = bs_bias[:, index_bs]
+        bs_var_opt[:, 0] = bs_var[:, index_bs]
 
         # Cross-validation
         index_cv = np.argmin(cv_error_test[degree - 1, :])
         cv_lmb_opt[degree - 1] = lambdas[index_cv]
+        cv_error_train_opt[:, 0] = cv_error_train[:, index_cv]
+        cv_error_test_opt[:, 0] = cv_error_test[:, index_cv]
 
         print('K-fold cross-validation:')
         print('K=%d, MSE = %.5f' % (K, cv_error_test[degree - 1, i]))
@@ -233,14 +246,14 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
     cv_best = [polydegree[cv_min[0]], lambdas[cv_min[1]]]
 
     # Bootstrap
-    bs_error_train_opt[:] = bs_error_train[:, bs_min[1]]
-    bs_error_test_opt[:] = bs_error_test[:, bs_min[1]]
-    bs_bias_opt[:] = bs_bias[:, bs_min[1]]
-    bs_var_opt[:] = bs_var[:, bs_min[1]]
+    bs_error_train_opt[:, 1] = bs_error_train[:, bs_min[1]]
+    bs_error_test_opt[:, 1] = bs_error_test[:, bs_min[1]]
+    bs_bias_opt[:, 1] = bs_bias[:, bs_min[1]]
+    bs_var_opt[:, 1] = bs_var[:, bs_min[1]]
 
     # Cross-validation
-    cv_error_train_opt[:] = cv_error_train[:, cv_min[1]]
-    cv_error_test_opt[:] = cv_error_test[:, cv_min[1]]
+    cv_error_train_opt[:, 1] = cv_error_train[:, cv_min[1]]
+    cv_error_test_opt[:, 1] = cv_error_test[:, cv_min[1]]
 
     # TODO: Combine into 3 or 4 arrays to be returned
     # TODO: currently this is just easier to make sure restructuring actually works
@@ -283,107 +296,38 @@ if run_mode == 'a':
 
 ########################################################################################################################
 if run_mode == 'b':
+    # Originally this only performed bootstrap with OLS
+    # but since the run_regression also does cross-validation,
+    # also printing those results make sense
+    reg_str = 'OLS'
+#    reg_str = 'SKL'  # Uses SKL OLS
+
     N_samples = N  # number of samples per bootstrap
-#    N_bootstraps = 100  # number of resamples
-    N_bootstraps = 2
-#    N_bootstraps = int(N/2)  # number of resamples
-#    N_bootstraps = N
+    N_bootstraps = 100  # number of resamples
 
-    # Splitting into train and test data
-#    print(X[5, :])
-    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)
-#    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=test_size)
-#    print('AAA', X_test[196, :])
-    print('meow', X_test[190:200, -9:-5])
+    # Setting up
+    nlambdas = 1  # 100
+    lambdas = np.ones(nlambdas)#np.logspace(-4, 1, nlambdas)
+    # Cross-validation
+    K = 5
 
-    # Scaling the data
-    X_train_scaled = fun.scale_X(X_train, scale)
-    X_test_scaled = fun.scale_X(X_test, scale)
-#    print('BBB', X_test_scaled[196, :])
-#    X_train_scaled = X_train
-#    X_test_scaled = X_test
+    # Parameters for easier saving to file
+    save = 'N%d_pmax%d_nlamb%d_noise%d_seed%d' % (N, p, nlambdas, noise, seed)
+    save_bs = '%s_%s_%s_Nbs%d_Ns%d' % (save, reg_str, 'boot', N_bootstraps, N_samples)
+    save_cv = '%s_%s_%s_k%d' % (save, reg_str, 'cv', K)
 
-#    print(X_test_scaled[196, :])
-
+    # Performing the regression
     polydegree = np.arange(1, p + 1)
-    trainError = np.zeros(p)
-    testError = np.zeros(p)
-    bs_error_OLS = np.zeros(p)
-    bs_bias_OLS = np.zeros(p)
-    bs_var_OLS = np.zeros(p)
+    variables = run_regression(X, z_ravel, reg_str, polydegree, lambdas, N_bootstraps, K, test_size, scale, method)
+    # Unpacking variables
+    bs_error_train, bs_error_test = variables[0:2]
+    bs_bias, bs_var = variables[2:4]
+    bs_error_train_opt, bs_error_test_opt = variables[4:6]
+    bs_bias_opt, bs_var_opt, bs_lmb_opt = variables[6:9]
+    cv_error_train, cv_error_test = variables[9:11]
+    cv_error_train_opt, cv_error_test_opt, cv_lmb_opt = variables[11:14]
+    bs_min, bs_best, cv_min, cv_best = variables[14:18]
 
-    OLS = reg.OrdinaryLeastSquares(OLSmethod)
-    for degree in range(1, p + 1):
-        n_poly = fun.polynom_N_terms(degree)
-        print('p = %2d, np = %3d' % (degree, n_poly))
-
-#        print('CCC', X_test[196, :])
-
-        X_train_bs = np.zeros((len(X_train), n_poly))
-        X_test_bs = np.zeros((len(X_test), n_poly))
-        X_train_OLS = np.zeros((len(X_train), n_poly))
-        X_test_OLS = np.zeros((len(X_test), n_poly))
-
-#        X_train_new[:, :] = X_train_scaled[:, 0:n_poly]
-#        X_test_new[:, :] = X_test_scaled[:, 0:n_poly]
-
-        X_train_bs[:, :] = X_train_scaled[:, 0:n_poly]
-        X_test_bs[:, :] = X_test_scaled[:, 0:n_poly]
-
-#        print('af hwawa',X_train_bs[195, :])  # why is X_train_bs scaled..............
-#        print('DDD', X_test[195, :])
-
-        X_train_OLS[:, :] = X_train_scaled[:, 0:n_poly]
-        X_test_OLS[:, :] = X_test_scaled[:, 0:n_poly]
-
-#        print('EEE', X_test[196, :])
-#        X_train_OLS = X_train_scaled[:, 0:n_poly]
-#        X_test_OLS = X_test_scaled[:, 0:n_poly]
-
-        # Ordinary Least Squares without Bootstrapping
-        betaOLS = OLS.fit(X_train_OLS, z_train)
-        z_trainOLS = OLS.predict(X_train_OLS)
-        z_testOLS = OLS.predict(X_test_OLS)
-
-#        print('FFF', X_test[196, :])
-        trainError[degree-1] = fun.mean_squared_error(z_train, z_trainOLS)
-        testError[degree-1] = fun.mean_squared_error(z_test, z_testOLS)
-
-        #print('meow', X_test[190:200, -9:-5])
-        print('nyaa', X_test_bs[190:200, -9:-5])
-        # Bootstrap
-#        OLS = reg.OrdinaryLeastSquares(OLSmethod)
-        bs = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, OLS, fun.mean_squared_error)
-        error_OLS, bias_OLS, var_OLS = bs.compute(N_bootstraps, test=True)
-        bs_error_OLS[degree-1] = error_OLS
-        bs_bias_OLS[degree-1] = bias_OLS
-        bs_var_OLS[degree-1] = var_OLS
-#        print(bias_OLS, type(bias_OLS))
-#        print(mean_OLS, var_OLS, bias_OLS)
-
-
-        '''
-        for i in range(N_bootstraps):
-            X_train_BS, z_train_BS = resample(X_train_new, z_train)
-            # Scaling the data
-            X_train_BS = fun.scale_X(X_train_BS)
-            if degree == 10 and i == 33:
-                print(z_train_BS)
-
-            betaBS = OLS.fit(X_train_BS, z_train_BS)
-            z_fitBS = OLS.predict(X_train_BS)
-            z_predBS = OLS.predict(X_test_new)
-
-            a = (z_test - np.mean(z_predBS)) ** 2
-#            print(a)
-            if degree == 10 and i == 33:
-                print(i, z_predBS)
-                print(i, z_fitBS)
-                print(np.mean((z_train_BS - z_fitBS)**2))
-            bs_mean_OLS[degree-1] += np.mean((z_test - z_predBS) ** 2) / N_bootstraps
-            bs_var_OLS[degree-1] += np.var(z_predBS) / len(z_predBS)
-            bs_bias_OLS[degree-1] += np.mean((z_test - np.mean(z_predBS)) ** 2) / N_bootstraps
-            '''
     '''
     fig = plt.figure()
     plt.plot(polydegree, trainError, label='Train')
@@ -395,7 +339,6 @@ if run_mode == 'b':
     plt.show()
     '''
 
-#    polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample = None)
     '''
     fun.plot_MSE_train_test(polydegree, trainError, bs_error_OLS, n_franke, test_size, noise,
                             fig_path, run_mode, 'Bootstrap')
@@ -410,9 +353,19 @@ if run_mode == 'b':
 
 #    fun.plot_MSE_test_OLS_fit(polydegree, trainError, testError, n_franke, test_size, noise, OLSmethod)
     '''
-    fun.plot_bias_variance(polydegree, bs_error_OLS, bs_bias_OLS, bs_var_OLS,
-                           'trade-off, $N$=%d, $N_{bs}$=%d' % (N, N_bootstraps),
-                           'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
+    fun.plot_bias_variance(polydegree, bs_error_test, bs_bias, bs_var,
+                           '%s, $N$=%d, $N_{bs}$=%d, noise = %.2f' % (reg_str, N, N_bootstraps, noise),
+                           '%s' % save_bs, fig_path, run_mode)
+
+    # Write bootstrap to file
+    fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0]],
+                     ['bs_error_test', 'bs_bias', 'bs_var'],
+                     write_path+'franke/bias_var_task_%s_%s.txt' % (run_mode, save_bs))
+
+    # Write CV to file
+    fun.save_to_file([cv_error_test_opt[:, 0], cv_error_train[:, 0]], ['cv_error_test', 'cv_error_train'],
+                     write_path+'franke/train_test_task_%s_%s.txt' % (run_mode, save_cv))
+
 
     plt.show()
 
@@ -468,18 +421,25 @@ if run_mode == 'c':
 ########################################################################################################################
 if run_mode == 'd':
     # Setting up for Ridge regression
+    reg_str = 'Ridge'
     nlambdas = 20  # 100
-    lambdas = np.logspace(-4, 1, nlambdas)
+    lambdas = np.logspace(-6, 1, nlambdas)
 
     # Bootstrap
     N_bootstraps = 100  # int(N/2)  # 100
+    N_samples = N  # TODO: currently not in use in run_regression
 
     # Cross-validation
     K = 5
 
+    # Parameters for easier saving to file
+    save = 'N%d_pmax%d_nlamb%d_noise%d_seed%d' % (N, p, nlambdas, noise, seed)
+    save_bs = '%s_%s_%s_Nbs%d_Ns%d' % (save, reg_str, 'boot', N_bootstraps, N_samples)
+    save_cv = '%s_%s_%s_k%d' % (save, reg_str, 'cv', K)
+
     polydegree = np.arange(1, p + 1)
 
-    variables = run_regression(X, z_ravel, 'Ridge', polydegree, lambdas, N_bootstraps, K, test_size, scale)
+    variables = run_regression(X, z_ravel, reg_str, polydegree, lambdas, N_bootstraps, K, test_size, scale)
     # Unpacking variables
     bs_error_train, bs_error_test = variables[0:2]
     bs_bias, bs_var = variables[2:4]
@@ -536,6 +496,16 @@ if run_mode == 'd':
     fun.plot_multiple_y(polydegree, [bs_error_test_opt, cv_error_test_opt], ['Bootstrap', 'CV'],
                         'Comparing bootstrap and cross-validation', 'Polynomial degree', 'Mean squared error',
                         'test_compare_BS_CV_p%d' % p, fig_path, run_mode)
+
+    # Write bootstrap to file
+    fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0], bs_lmb_opt],
+                     ['bs_error_test', 'bs_bias', 'bs_var', 'bs_lmb'],
+                     write_path+'franke/bias_var_task_%s_%s.txt' % (run_mode, save_bs))
+
+    # Write CV to file
+    fun.save_to_file([cv_error_test_opt[:, 0], cv_error_train[:, 0], cv_lmb_opt],
+                     ['cv_error_test', 'cv_error_train', 'cv_lmb'],
+                     write_path+'franke/train_test_task_%s_%s.txt' % (run_mode, save_cv))
 
     # Confidence Interval plot for Ridge
     X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)

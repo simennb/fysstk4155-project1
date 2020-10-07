@@ -20,7 +20,7 @@ def timeit(method):
             name = kw.get('log_name', method.__name__.upper())
             kw['log_time'][name] = int((t_end - t_start))
         else:
-            print('%r  %.4f ms' % (method.__name__, t_end - t_start))
+            print('%r  %.4f s' % (method.__name__, t_end - t_start))
         return result
     return timed
 
@@ -382,6 +382,28 @@ def plot_terrain(z, title, save, fig_path, task, fs=14):
     plt.ylabel('Y', fontsize=fs)
     plt.tight_layout()
     plt.savefig(fig_path+'task_%s/%s.png' % (task, save))
+
+
+def save_to_file(array_list, column_names, filename):
+    outfile = open(filename, 'w')
+
+    n_cols = len(column_names)
+
+    line = 'p '
+    for j in range(n_cols):
+        line += '%s ' % column_names[j]
+    line += '\n'
+    outfile.write(line)
+
+    for i in range(len(array_list[0])):
+        line = '%d ' % (i+1)
+        for j in range(n_cols):
+            line += '%2.4e ' % array_list[j][i]
+        line += '\n'
+        outfile.write(line)
+
+    outfile.close()
+    return
 
 
 if __name__ == '__main__':

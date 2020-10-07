@@ -87,10 +87,10 @@ def test_bootstrap(fig_path):
         # Bootstrap from resampling_methods.py
         OLS = reg.OrdinaryLeastSquares()
         bs = res.Bootstrap(X_train, X_test, y_train[:, 0], y_test, OLS, fun.mean_squared_error)
-        mean_TEST, bias_TEST, var_TEST = bs.compute(n_boostraps)
-        bs_error[degree] = mean_TEST
-        bs_bias[degree] = bias_TEST
-        bs_variance[degree] = var_TEST
+        error_, bias_, var_, error_t = bs.compute(n_boostraps)
+        bs_error[degree] = error_
+        bs_bias[degree] = bias_
+        bs_variance[degree] = var_
         #        print(bias_OLS, type(bias_OLS))
         #        print(mean_OLS, var_OLS, bias_OLS)
 
@@ -101,18 +101,20 @@ def test_bootstrap(fig_path):
     print('Time elapsed lecture version: %.5f s' % (end_lecture - start_lecture))
     print('Time elapsed selfmade version: %.5f s' % (end_self - start_self))
 
+    fs = 13
     fig, axs = plt.subplots(2)
-    fig.suptitle('Comparison between bootstrap implementations')
+    fig.suptitle('Comparison between bootstrap implementations', fontsize=fs)
 
     axs[0].plot(polydegree, error, label='Error')
     axs[0].plot(polydegree, bias, label='Bias')
     axs[0].plot(polydegree, variance, label='Variance')
-    axs[0].set_ylabel('Lecture slides')
+    axs[0].set_ylabel('Lecture slides', fontsize=fs)
 
     axs[1].plot(polydegree, bs_error, label='Error')
     axs[1].plot(polydegree, bs_bias, label='Bias')
     axs[1].plot(polydegree, bs_variance, label='Variance')
-    axs[1].set_ylabel('Self-made')
+    axs[1].set_ylabel('Self-made', fontsize=fs)
+    axs[1].set_xlabel('Polynomial degree p', fontsize=fs)
 
     axs[0].legend()
     axs[1].legend()

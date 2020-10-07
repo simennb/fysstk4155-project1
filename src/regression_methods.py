@@ -20,9 +20,11 @@ class OrdinaryLeastSquares:
 
         elif self.method == 4:
             self.beta = np.linalg.pinv(X.T @ X) @ X.T @ y  # Method 4
+            # Very close to SKL accuracy wise
 
         elif self.method == 5:
             self.beta = np.linalg.pinv(X) @ y  # Method 5
+            # For some reason yields better results than SKL and method 4
 
         return self.beta
 

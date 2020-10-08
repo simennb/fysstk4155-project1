@@ -31,8 +31,8 @@ data = 'terrain' if run_mode in ['f', 'g'] else data
 
 # Common variables for both parts for easy adjusting
 # Most of the parameters that can be adjusted will be inside the if-test corresponding to the task
-p_dict = {'a': 5, 'b': 20, 'c': 5, 'd': 20,
-          'e': 10, 'f': 1, 'g': 15}
+p_dict = {'a': 6, 'b': 20, 'c': 20, 'd': 20,
+          'e': 20, 'f': 1, 'g': 20}
 scale_dict = {'a': [True, False], 'b': [True, False], 'c': [True, False], 'd': [True, False],
               'e': [True, False], 'f': None, 'g': [True, False]}
 p = p_dict[run_mode]  # degree of polynomial for the task
@@ -43,13 +43,14 @@ fig_path = '../figures/'
 data_path = '../datafiles/'
 
 write_path = '../datafiles/'
-#write_path = '../benchmarks/'  # to write benchmarks
+#write_path = '../benchmarks/'  # to write benchmarks NOT NEEDED
+benchmark = False
 
-
-#reg_g = 'OLS'
-#reg_g = 'SKL'
-reg_g = 'Ridge'
-#reg_g = 'Lasso'
+# For the terrain data, every other task has their own reg_str defined
+#reg_str = 'OLS'
+#reg_str = 'SKL'
+#reg_str = 'Ridge'
+reg_str = 'Lasso'
 
 method = 5  # OLS method (check regression_methods.py)
 
@@ -121,8 +122,14 @@ if data == 'terrain':
     print('Terrain datafile: %s' % terrain_data)
     print('Patch location: [x, y] start = ', loc_s, ' end = ', loc_e)
 
+
 ########################################################################################################################
-@fun.timeit
+#@fun.timeit
+from sklearn.utils.testing import ignore_warnings
+from sklearn.exceptions import ConvergenceWarning
+
+
+@ignore_warnings(category=ConvergenceWarning)
 def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, scale, method=5, max_iter=50000):
     """
     Runs the selected regression methods for the input design matrix, p's, lambdas, and using
@@ -141,14 +148,10 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
     :param K:
     :param test_size:
     :param scale:
-    :return:
+    :return: way too many arrays
     """
     nlambdas = len(lambdas)
     p = polydegree[-1]
-
-    # Bootstrap and cross-validation
-#    N_bootstraps = 100  # int(N/2)
-#    K = 5
 
     # Splitting into train and test, scaling the data
     X_train, X_test, z_train, z_test = fun.split_data(X, z, test_size=test_size)
@@ -205,10 +208,10 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
             if reg_string == 'Ridge':
                 reg_obj.set_lambda(lmb)
             elif reg_string == 'Lasso':
-                reg_obj = skl.Lasso(alpha=lmb, max_iter=max_iter)
+                reg_obj = skl.Lasso(alpha=lmb, max_iter=max_iter, precompute=True, warm_start=True)
 
             # Bootstrap
-            BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, reg_obj, fun.mean_squared_error)
+            BS = res.Bootstrap(X_train_bs, X_test_bs, z_train, z_test, reg_obj)
             error_, bias_, var_, trainE_ = BS.compute(N_bs)
             bs_error_test[degree-1, i] = error_
             bs_bias[degree-1, i] = bias_
@@ -216,7 +219,7 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
             bs_error_train[degree-1, i] = trainE_
 
             # Cross validation
-            CV = res.CrossValidation(X_cv, z, reg_obj, fun.mean_squared_error)
+            CV = res.CrossValidation(X_cv, z, reg_obj)
             trainE, testE = CV.compute(K)
             cv_error_train[degree-1, i] = trainE
             cv_error_test[degree-1, i] = testE
@@ -235,9 +238,6 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
         cv_lmb_opt[degree - 1] = lambdas[index_cv]
         cv_error_train_opt[:, 0] = cv_error_train[:, index_cv]
         cv_error_test_opt[:, 0] = cv_error_test[:, index_cv]
-
-        print('K-fold cross-validation:')
-        print('K=%d, MSE = %.5f' % (K, cv_error_test[degree - 1, i]))
 
     # Locate minimum MSE  to see how it depends on lambda
     bs_min = np.unravel_index(np.argmin(bs_error_test), bs_error_test.shape)
@@ -265,9 +265,11 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
 
 ########################################################################################################################
 if run_mode == 'a':
+    save = 'N%d_nf%d_p%d_noise%.2f_seed%d' % (N, n_franke, p, noise, seed)
+
     # Splitting into train and test data
-    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)  # TODO: check
-#    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=0.2)
+    X_train, X_test, z_train, z_test = fun.split_data(X, z_ravel, test_size=test_size)
+#    X_train, X_test, z_train, z_test = train_test_split(X, z_ravel, test_size=test_size)
 
     # Scaling the data
     X_train_scaled = fun.scale_X(X_train, scale)
@@ -275,7 +277,7 @@ if run_mode == 'a':
 
     # Plotting the Franke function
     fun.plot_surf(x_mesh, y_mesh, z_mesh, 'x', 'y', 'z', 'Franke function, $N$=%d, noise=%.2f' % (N, noise),
-                  'franke_n%d' % N, fig_path, run_mode, zlim=[-0.10, 1.40])
+                  'franke_%s' % save, fig_path, run_mode, zlim=[-0.10, 1.40], azim=60)
 
     # Ordinary Least Squares
     OLS = reg.OrdinaryLeastSquares()
@@ -289,31 +291,31 @@ if run_mode == 'a':
 
     # Confidence interval for beta
     conf = OLS.confidence_interval_beta(X_test, z_test, z_pred)
-    fun.plot_confidence_int(betaOLS, conf, 'OLS', fig_path, run_mode)
+    fun.plot_confidence_int(betaOLS, conf, 'OLS', save, fig_path, run_mode)
     plt.show()
-    sys.exit(1)
 
 
 ########################################################################################################################
 if run_mode == 'b':
     # Originally this only performed bootstrap with OLS
-    # but since the run_regression also does cross-validation,
-    # also printing those results make sense
+    # But now makes every relevant Franke function plot for OLS
     reg_str = 'OLS'
 #    reg_str = 'SKL'  # Uses SKL OLS
 
-    N_samples = N  # number of samples per bootstrap
-    N_bootstraps = 100  # number of resamples
+    # Bootstrap variables
+#    N_bootstraps = 100  # number of resamples (ex. N/2, N/4)
+    N_bootstraps = int(N/2)
 
-    # Setting up
-    nlambdas = 1  # 100
-    lambdas = np.ones(nlambdas)#np.logspace(-4, 1, nlambdas)
     # Cross-validation
     K = 5
 
-    # Parameters for easier saving to file
-    save = 'N%d_pmax%d_nlamb%d_noise%d_seed%d' % (N, p, nlambdas, noise, seed)
-    save_bs = '%s_%s_%s_Nbs%d_Ns%d' % (save, reg_str, 'boot', N_bootstraps, N_samples)
+    # Setting up to make sure things work
+    nlambdas = 1
+    lambdas = np.ones(nlambdas)
+
+    # Parameters for saving to file
+    save = 'N%d_pmax%d_nlamb%d_noise%.2f_seed%d' % (N, p, nlambdas, noise, seed)
+    save_bs = '%s_%s_%s_Nbs%d' % (save, reg_str, 'boot', N_bootstraps)
     save_cv = '%s_%s_%s_k%d' % (save, reg_str, 'cv', K)
 
     # Performing the regression
@@ -328,44 +330,32 @@ if run_mode == 'b':
     cv_error_train_opt, cv_error_test_opt, cv_lmb_opt = variables[11:14]
     bs_min, bs_best, cv_min, cv_best = variables[14:18]
 
-    '''
-    fig = plt.figure()
-    plt.plot(polydegree, trainError, label='Train')
-    plt.plot(polydegree, testError, label='Test')
-    plt.plot(polydegree, bs_mean_OLS, label='BS Test')
-    plt.grid('on')
-    plt.legend()
-    #    plt.yscale('log')
-    plt.show()
-    '''
+    # Bootstrap plots
+    xlim = [1, 20]
+    ylim = [0.0, 0.02]
+    fun.plot_MSE_train_test(polydegree, bs_error_train_opt[:, 0], bs_error_test_opt[:, 0],
+                            '%s, $N$=%d, $N_{bs}$=%d, noise=%.2f' % (reg_str, N, N_bootstraps, noise),
+                            'train_test_%s' % save_bs, fig_path, run_mode,
+                            resample='Bootstrap', xlim=xlim, ylim=ylim)
 
-    '''
-    fun.plot_MSE_train_test(polydegree, trainError, bs_error_OLS, n_franke, test_size, noise,
-                            fig_path, run_mode, 'Bootstrap')
+    fun.plot_bias_variance(polydegree, bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0],
+                           'Bootstrap, %s, $N$=%d, $N_{bs}$=%d, noise=%.2f' % (reg_str, N, N_bootstraps, noise),
+                           '%s' % save_bs, fig_path, run_mode, xlim=xlim, ylim=ylim)
 
-    fun.plot_MSE_train_test(polydegree, error_train_BS, error_test_BS,
-                            '%s, N = %d, $N_{BS}$ = %d' % (reg_g, N, N_bootstraps),
-                            '%s_patch%d_n%d_ts%.2f' % (reg_g, patch, N, test_size),
-                            fig_path, run_mode, resample='Bootstrap')
-
-    fun.plot_MSE_train_test(polydegree, trainError, testError, n_franke, test_size, noise,
-                            fig_path, run_mode)
-
-#    fun.plot_MSE_test_OLS_fit(polydegree, trainError, testError, n_franke, test_size, noise, OLSmethod)
-    '''
-    fun.plot_bias_variance(polydegree, bs_error_test, bs_bias, bs_var,
-                           '%s, $N$=%d, $N_{bs}$=%d, noise = %.2f' % (reg_str, N, N_bootstraps, noise),
-                           '%s' % save_bs, fig_path, run_mode)
+    # Cross-validation plot
+    fun.plot_MSE_train_test(polydegree, cv_error_train_opt[:, 0], cv_error_test_opt[:, 0],
+                            '%s, $N$=%d, $K$=%d, noise=%.2f' % (reg_str, N, K, noise),
+                            'train_test_%s' % save_cv, fig_path, run_mode,
+                            resample='CV', xlim=xlim, ylim=ylim)
 
     # Write bootstrap to file
     fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0]],
                      ['bs_error_test', 'bs_bias', 'bs_var'],
-                     write_path+'franke/bias_var_task_%s_%s.txt' % (run_mode, save_bs))
+                     write_path+'franke/bias_var_task_%s_%s.txt' % (run_mode, save_bs), benchmark)
 
     # Write CV to file
     fun.save_to_file([cv_error_test_opt[:, 0], cv_error_train[:, 0]], ['cv_error_test', 'cv_error_train'],
-                     write_path+'franke/train_test_task_%s_%s.txt' % (run_mode, save_cv))
-
+                     write_path+'franke/train_test_task_%s_%s.txt' % (run_mode, save_cv), benchmark)
 
     plt.show()
 
@@ -381,7 +371,7 @@ if run_mode == 'c':
     error_test_SKL = np.zeros(len(polydegree))
 
     X_scaled = fun.scale_X(X, scale)
-    OLS = reg.OrdinaryLeastSquares(OLSmethod)
+    OLS = reg.OrdinaryLeastSquares(method)
     for degree in range(1, p + 1):
         n_poly = fun.polynom_N_terms(degree)
         print('p = %2d, np = %3d' % (degree, n_poly))
@@ -389,7 +379,7 @@ if run_mode == 'c':
         X_cv = np.zeros((len(X_scaled), n_poly))
         X_cv[:, :] = X_scaled[:, 0:n_poly]
 
-        CV = res.CrossValidation(X_cv, z_ravel, OLS, fun.mean_squared_error)
+        CV = res.CrossValidation(X_cv, z_ravel, OLS)
         trainE, testE = CV.compute(K)
         error_train_CV[degree-1] = trainE
         error_test_CV[degree-1] = testE
@@ -413,8 +403,6 @@ if run_mode == 'c':
                         'Comparing different CV implementations', 'Polynomial degree', 'Mean squared error',
                         'train_compare_CV_SKL_p%d' % p, fig_path, run_mode)
 
-    # Suspect the difference lies in the splitting, which would be worth looking at
-
     plt.show()
 
 
@@ -426,16 +414,17 @@ if run_mode == 'd':
     lambdas = np.logspace(-6, 1, nlambdas)
 
     # Bootstrap
-    N_bootstraps = 100  # int(N/2)  # 100
-    N_samples = N  # TODO: currently not in use in run_regression
+#    N_bootstraps = 100
+    N_bootstraps = int(N/2)
 
     # Cross-validation
     K = 5
 
     # Parameters for easier saving to file
-    save = 'N%d_pmax%d_nlamb%d_noise%d_seed%d' % (N, p, nlambdas, noise, seed)
-    save_bs = '%s_%s_%s_Nbs%d_Ns%d' % (save, reg_str, 'boot', N_bootstraps, N_samples)
+    save = 'N%d_pmax%d_nlamb%d_noise%.2f_seed%d' % (N, p, nlambdas, noise, seed)
+    save_bs = '%s_%s_%s_Nbs%d' % (save, reg_str, 'boot', N_bootstraps)
     save_cv = '%s_%s_%s_k%d' % (save, reg_str, 'cv', K)
+    save_bc = '%s_%s_Nbs%d_k%d' % (save, reg_str, N_bootstraps, K)
 
     polydegree = np.arange(1, p + 1)
 
@@ -451,51 +440,58 @@ if run_mode == 'd':
 
     # Plotting
 
-    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], 'Bootstrap p=%d' % bs_best[0],
-                        'bootstrap_p%d' % bs_best[0], fig_path, run_mode, fs=14)
+    # Lambda, MSE plots
+    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], '%s, Bootstrap, p=%d' % (reg_str, bs_best[0]),
+                        'bootstrap_p%d_%s' % (bs_best[0], save_bs), fig_path, run_mode, fs=14)
 
-    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], 'Cross-validation p=%d' % cv_best[0],
-                        'cv_p%d' % cv_best[0], fig_path, run_mode, fs=14)
+    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], '%s, Cross-validation, p=%d' % (reg_str, cv_best[0]),
+                        'cv_p%d_%s' % (cv_best[0], save_cv), fig_path, run_mode, fs=14)
 
-    # Bootstrap Plots
-#    fun.plot_bias_variance(polydegree, bs_error_test[:, bs_min_error[1]], bs_bias[:, bs_min_error[1]], bs_var[:, bs_min_error[1]],
-    fun.plot_bias_variance(polydegree, bs_error_test_opt, bs_bias_opt, bs_var_opt,
-                           'Ridge regression, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (bs_best[1], N, N_bootstraps),
-                           'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
-
+    # Polydegree, lambda plots
     fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Minimum MSE, Bootstrap',
-                           'bootstrap', fig_path, run_mode)
+                           save_bs, fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Ridge',
-                     'bs_ridge_error', fig_path, run_mode)
-
-    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + Ridge',
-                     'bs_ridge_bias', fig_path, run_mode)
-
-    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + Ridge',
-                     'bs_ridge_variance', fig_path, run_mode)
-
-    # Cross-Validation Plots
     fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'Minimum MSE, CV',
-                           'cv', fig_path, run_mode)
+                           save_cv, fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + Ridge',
-                     'cv_ridge_error', fig_path, run_mode)
+    # Heatmaps
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + %s' % reg_str,
+                     'bs_error_%s' % save_bs, fig_path, run_mode)
 
-    # MSE train test plots
-    fun.plot_MSE_train_test(polydegree, cv_error_train_opt, cv_error_test_opt,
-                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
-                            'p%d_lmb%.2e_n%d_ts%.2f' % (cv_best[0], cv_best[1], N, test_size),
-                            fig_path, run_mode, resample='CV')
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + %s' % reg_str,
+                     'bs_bias_%s' % save_bs, fig_path, run_mode)
 
-    fun.plot_MSE_train_test(polydegree, bs_error_train_opt, bs_error_test_opt,
-                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
-                            'p%d_lmb%.2e_n%d_ts%.2f' % (bs_best[0], bs_best[1], N, test_size),
-                            fig_path, run_mode, resample='Bootstrap')
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + %s' % reg_str,
+                     'bs_variance_%s' % save_bs, fig_path, run_mode)
 
-    fun.plot_multiple_y(polydegree, [bs_error_test_opt, cv_error_test_opt], ['Bootstrap', 'CV'],
-                        'Comparing bootstrap and cross-validation', 'Polynomial degree', 'Mean squared error',
-                        'test_compare_BS_CV_p%d' % p, fig_path, run_mode)
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + %s' % reg_str,
+                     'cv_error_%s' % save_cv, fig_path, run_mode)
+
+    # Plotting the two elements of the optimal arrays, only second should be relevant
+    # TODO: remove loop maybe?
+    for i in range(2):
+        # Bias-variance trade-off
+        fun.plot_bias_variance(polydegree, bs_error_test_opt[:, i], bs_bias_opt[:, i], bs_var_opt[:, i],
+                               '%s, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (reg_str, bs_best[1], N, N_bootstraps),
+                               '%s_opt%d' % (save_bs, i), fig_path, run_mode)
+
+        # MSE train test plots
+        fun.plot_MSE_train_test(polydegree, bs_error_train_opt[:, i], bs_error_test_opt[:, i],
+                                'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
+                                '%s_opt%d' % (save_bs, i),
+#                                'p%d_lmb%.2e_n%d_ts%.2f_opt%d' % (bs_best[0], bs_best[1], N, test_size, i),
+                                fig_path, run_mode, resample='Bootstrap')
+
+        fun.plot_MSE_train_test(polydegree, cv_error_train_opt[:, i], cv_error_test_opt[:, i],
+                                'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
+                                '%s_opt%d' % (save_cv, i),
+#                                'p%d_lmb%.2e_n%d_ts%.2f_opt%d' % (cv_best[0], cv_best[1], N, test_size, i),
+                                fig_path, run_mode, resample='CV')
+
+        fun.plot_multiple_y(polydegree, [bs_error_test_opt[:, i], cv_error_test_opt[:, i]],
+                            ['test, Bootstrap', 'test, CV'],
+                            'Comparing bootstrap and cross-validation', 'Polynomial degree', 'Mean squared error',
+                            'test_compare_BS_CV_p%d_%s_opt%d' % (p, save_bc, i), fig_path, run_mode)
 
     # Write bootstrap to file
     fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0], bs_lmb_opt],
@@ -519,23 +515,40 @@ if run_mode == 'd':
     z_Ridge = Ridge.predict(X_test_scaled[:, 0:n_poly])
     beta_Ridge = Ridge.beta
     conf = Ridge.confidence_interval_beta(X_test_scaled[:, 0:n_poly], z_test, z_Ridge)
-    fun.plot_confidence_int(beta_Ridge, conf, 'Ridge', fig_path, run_mode)
+    fun.plot_confidence_int(beta_Ridge, conf, 'Ridge', save, fig_path, run_mode)
     plt.show()
 
 
 ########################################################################################################################
 if run_mode == 'e':
+    reg_str = 'Lasso'
+    max_iter = 100000
+
     # Lambdas / alphas for LASSO regression
+    nlambdas = 10#30  # 100
+    lambdas = np.logspace(-6, -1, nlambdas)
+
+    # This works, so something like that for benchmark?
+    '''
+    max_iter = 50000
     nlambdas = 15#30  # 100
     lambdas = np.logspace(-4, -1, nlambdas)
+    '''
 
     # Bootstrap and cross-validation
     N_bootstraps = int(N/2)
     K = 5
 
+    # Parameters for easier saving to file
+    save = 'N%d_pmax%d_nlamb%d_noise%.2f_seed%d' % (N, p, nlambdas, noise, seed)
+    save_bs = '%s_%s_%s_Nbs%d' % (save, reg_str, 'boot', N_bootstraps)
+    save_cv = '%s_%s_%s_k%d' % (save, reg_str, 'cv', K)
+    save_bc = '%s_%s_Nbs%d_k%d' % (save, reg_str, N_bootstraps, K)
+
     polydegree = np.arange(1, p + 1)
 
-    variables = run_regression(X, z_ravel, 'Lasso', polydegree, lambdas, N_bootstraps, K, test_size, scale, max_iter=50000)
+    variables = run_regression(X, z_ravel, reg_str, polydegree, lambdas, N_bootstraps, K,
+                               test_size, scale, max_iter=max_iter)
     # Unpacking variables
     bs_error_train, bs_error_test = variables[0:2]
     bs_bias, bs_var = variables[2:4]
@@ -548,56 +561,70 @@ if run_mode == 'e':
 
     # Plotting
 
-    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], 'Bootstrap p=%d' % bs_best[0],
-                        'bootstrap_p%d' % bs_best[0], fig_path, run_mode, fs=14)
+    # Lambda, MSE plots
+    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], '%s, Bootstrap, p=%d' % (reg_str, bs_best[0]),
+                        'bootstrap_p%d_%s' % (bs_best[0], save_bs), fig_path, run_mode, fs=14)
 
-    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], 'Cross-validation p=%d' % cv_best[0],
-                        'cv_p%d' % cv_best[0], fig_path, run_mode, fs=14)
+    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], '%s, Cross-validation, p=%d' % (reg_str, cv_best[0]),
+                        'cv_p%d_%s' % (cv_best[0], save_cv), fig_path, run_mode, fs=14)
 
-    # Bootstrap Plots
-    #    fun.plot_bias_variance(polydegree, bs_error_test[:, bs_min_error[1]], bs_bias[:, bs_min_error[1]], bs_var[:, bs_min_error[1]],
-    fun.plot_bias_variance(polydegree, bs_error_test_opt, bs_bias_opt, bs_var_opt,
-                           'Lasso regression, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (bs_best[1], N, N_bootstraps),
-                           'N%d_Nbs%d' % (N, N_bootstraps), fig_path, run_mode)
-
+    # Polydegree, lambda plots
     fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Minimum MSE, Bootstrap',
-                           'bootstrap', fig_path, run_mode)
+                           save_bs, fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Lasso',
-                     'bs_lasso_error', fig_path, run_mode)
-
-    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + Lasso',
-                     'bs_lasso_bias', fig_path, run_mode)
-
-    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + Lasso',
-                     'bs_lasso_variance', fig_path, run_mode)
-
-    # Cross-Validation Plots
     fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'Minimum MSE, CV',
-                           'cv', fig_path, run_mode)
+                           save_cv, fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + Lasso',
-                     'cv_lasso_error', fig_path, run_mode)
+    # Heatmaps
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + %s' % reg_str,
+                     'bs_error_%s' % save_bs, fig_path, run_mode)
 
-    # MSE train test plots
-    fun.plot_MSE_train_test(polydegree, cv_error_train_opt, cv_error_test_opt,
-                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
-                            'p%d_lmb%.2e_n%d_ts%.2f' % (cv_best[0], cv_best[1], N, test_size),
-                            fig_path, run_mode, resample='CV')
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + %s' % reg_str,
+                     'bs_bias_%s' % save_bs, fig_path, run_mode)
 
-    fun.plot_MSE_train_test(polydegree, bs_error_train_opt, bs_error_test_opt,
-                            'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
-                            'p%d_lmb%.2e_n%d_ts%.2f' % (bs_best[0], bs_best[1], N, test_size),
-                            fig_path, run_mode, resample='Bootstrap')
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + %s' % reg_str,
+                     'bs_variance_%s' % save_bs, fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + Lasso',
-                     'bs_lasso_error', fig_path, run_mode)
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + %s' % reg_str,
+                     'cv_error_%s' % save_cv, fig_path, run_mode)
 
-    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'Cross-validation + Lasso',
-                     'cv_lasso_error', fig_path, run_mode)
+    # Plotting the two elements of the optimal arrays, only second should be relevant
+    # TODO: remove loop maybe?
+    for i in range(2):
+        # Bias-variance trade-off
+        fun.plot_bias_variance(polydegree, bs_error_test_opt[:, i], bs_bias_opt[:, i], bs_var_opt[:, i],
+                               '%s, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (reg_str, bs_best[1], N, N_bootstraps),
+                               '%s_opt%d' % (save_bs, i), fig_path, run_mode)
+
+        # MSE train test plots
+        fun.plot_MSE_train_test(polydegree, bs_error_train_opt[:, i], bs_error_test_opt[:, i],
+                                'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
+                                '%s_opt%d' % (save_bs, i),
+#                                'p%d_lmb%.2e_n%d_ts%.2f_opt%d' % (bs_best[0], bs_best[1], N, test_size, i),
+                                fig_path, run_mode, resample='Bootstrap')
+
+        fun.plot_MSE_train_test(polydegree, cv_error_train_opt[:, i], cv_error_test_opt[:, i],
+                                'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
+                                '%s_opt%d' % (save_cv, i),
+#                                'p%d_lmb%.2e_n%d_ts%.2f_opt%d' % (cv_best[0], cv_best[1], N, test_size, i),
+                                fig_path, run_mode, resample='CV')
+
+        fun.plot_multiple_y(polydegree, [bs_error_test_opt[:, i], cv_error_test_opt[:, i]],
+                            ['test, Bootstrap', 'test, CV'],
+                            'Comparing bootstrap and cross-validation', 'Polynomial degree', 'Mean squared error',
+                            'test_compare_BS_CV_p%d_%s_opt%d' % (p, save_bc, i), fig_path, run_mode)
+
+    # Write bootstrap to file
+    fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0], bs_lmb_opt],
+                     ['bs_error_test', 'bs_bias', 'bs_var', 'bs_lmb'],
+                     write_path+'franke/bias_var_task_%s_%s.txt' % (run_mode, save_bs))
+
+    # Write CV to file
+    fun.save_to_file([cv_error_test_opt[:, 0], cv_error_train[:, 0], cv_lmb_opt],
+                     ['cv_error_test', 'cv_error_train', 'cv_lmb'],
+                     write_path+'franke/train_test_task_%s_%s.txt' % (run_mode, save_cv))
 
     plt.show()
-
 
 ########################################################################################################################
 if run_mode == 'f':
@@ -606,7 +633,8 @@ if run_mode == 'f':
                      'terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]), fig_path, run_mode)
 
     fun.plot_surf(y_mesh, x_mesh, z_mesh, 'x', 'y', 'z', 'Terrain, $N$=%d' % N,
-                  'surf_terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]), fig_path, run_mode, [0, 1.0])
+                  'surf_terrain_n%d_%d_%d' % (n_terrain, loc_s[0], loc_s[1]),
+                  fig_path, run_mode, [-0.2, 0.8], azim=-30)
 
     plt.show()
 
@@ -614,25 +642,25 @@ if run_mode == 'f':
 ########################################################################################################################
 if run_mode == 'g':
 
-    if reg_g == 'OLS':
+    if reg_str == 'OLS':
         # Setting to 1 for OLS
         nlambdas = 1
         lambdas = np.zeros(1)
-    elif reg_g == 'Ridge':
+    elif reg_str == 'Ridge':
         # Lambdas for Ridge regression
         nlambdas = 15  # 30  # 100
-        lambdas = np.logspace(-4, 1, nlambdas)
-    elif reg_g == 'Lasso':
+        lambdas = np.logspace(-6, 1, nlambdas)
+    elif reg_str == 'Lasso':
         # Lambdas / alphas for Lasso regression
         nlambdas = 15  # 30  # 100
         lambdas = np.logspace(-4, 1, nlambdas)
-        max_iter = 100000
+    max_iter = 500000
 
     polydegree = np.arange(1, p + 1)
     N_bootstraps = 100
     K = 5
 
-    variables = run_regression(X, z, reg_g, polydegree, lambdas, N_bootstraps, K, test_size, scale, max_iter=max_iter)
+    variables = run_regression(X, z, reg_str, polydegree, lambdas, N_bootstraps, K, test_size, scale, max_iter=max_iter)
     # Unpacking variables
     bs_error_train, bs_error_test = variables[0:2]
     bs_bias, bs_var = variables[2:4]
@@ -643,6 +671,81 @@ if run_mode == 'g':
     bs_min, bs_best, cv_min, cv_best = variables[14:18]
     # way too many
 
+    # Parameters for easier saving to file
+    run_mode += '/%s' % reg_str
+    save = 'N%d_patch%d_pmax%d_nlamb%d' % (N, patch, p, nlambdas,)
+    save_bs = '%s_%s_%s_Nbs%d' % (save, reg_str, 'boot', N_bootstraps)
+    save_cv = '%s_%s_%s_k%d' % (save, reg_str, 'cv', K)
+    save_bc = '%s_%s_Nbs%d_k%d' % (save, reg_str, N_bootstraps, K)
+
+    # Plotting
+
+    # Lambda, MSE plots
+    fun.plot_lambda_mse(lambdas, bs_error_test[bs_min[0], :], '%s, Bootstrap, p=%d' % (reg_str, bs_best[0]),
+                        'bootstrap_p%d_%s' % (bs_best[0], save_bs), fig_path, run_mode, fs=14)
+
+    fun.plot_lambda_mse(lambdas, cv_error_test[cv_min[0], :], '%s, Cross-validation, p=%d' % (reg_str, cv_best[0]),
+                        'cv_p%d_%s' % (cv_best[0], save_cv), fig_path, run_mode, fs=14)
+
+    # Polydegree, lambda plots
+    fun.plot_degree_lambda(polydegree, bs_lmb_opt, 'Minimum MSE, Bootstrap',
+                           save_bs, fig_path, run_mode)
+
+    fun.plot_degree_lambda(polydegree, cv_lmb_opt, 'Minimum MSE, CV',
+                           save_cv, fig_path, run_mode)
+
+    # Heatmaps
+    fun.plot_heatmap(lambdas, polydegree, bs_error_test, 'MSE', 'Bootstrap + %s' % reg_str,
+                     'bs_error_%s' % save_bs, fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_bias, 'bias', 'Bootstrap + %s' % reg_str,
+                     'bs_bias_%s' % save_bs, fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, bs_var, 'var', 'Bootstrap + %s' % reg_str,
+                     'bs_variance_%s' % save_bs, fig_path, run_mode)
+
+    fun.plot_heatmap(lambdas, polydegree, cv_error_test, 'MSE', 'CV + %s' % reg_str,
+                     'cv_error_%s' % save_cv, fig_path, run_mode)
+
+    # Plotting the two elements of the optimal arrays, only second should be relevant
+    # TODO: remove loop maybe?
+    for i in range(2):
+        # Bias-variance trade-off
+        fun.plot_bias_variance(polydegree, bs_error_test_opt[:, i], bs_bias_opt[:, i], bs_var_opt[:, i],
+                               '%s, $\lambda$=%.2e, $N$=%d, $N_{bs}$=%d' % (reg_str, bs_best[1], N, N_bootstraps),
+                               '%s_opt%d' % (save_bs, i), fig_path, run_mode)
+
+        # MSE train test plots
+        fun.plot_MSE_train_test(polydegree, bs_error_train_opt[:, i], bs_error_test_opt[:, i],
+                                'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
+                                'p%d_lmb%.2e_n%d_ts%.2f_opt%d' % (bs_best[0], bs_best[1], N, test_size, i),
+                                fig_path, run_mode, resample='Bootstrap')
+
+        fun.plot_MSE_train_test(polydegree, cv_error_train_opt[:, i], cv_error_test_opt[:, i],
+                                'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (cv_best[0], cv_best[1], N, N_bootstraps),
+                                'p%d_lmb%.2e_n%d_ts%.2f_opt%d' % (cv_best[0], cv_best[1], N, test_size, i),
+                                fig_path, run_mode, resample='CV')
+
+        fun.plot_multiple_y(polydegree, [bs_error_test_opt[:, i], cv_error_test_opt[:, i]],
+                            ['test, Bootstrap', 'test, CV'],
+                            'Comparing bootstrap and cross-validation', 'Polynomial degree', 'Mean squared error',
+                            'test_compare_BS_CV_p%d_%s_opt%d' % (p, save_bc, i), fig_path, run_mode)
+
+    # Write bootstrap to file
+    run_mode = 'task_g'  # spaghetti code
+    fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0], bs_lmb_opt],
+                     ['bs_error_test', 'bs_bias', 'bs_var', 'bs_lmb'],
+                     write_path+'terrain/bias_var_task_%s_%s.txt' % (run_mode, save_bs))
+
+    # Write CV to file
+    fun.save_to_file([cv_error_test_opt[:, 0], cv_error_train[:, 0], cv_lmb_opt],
+                     ['cv_error_test', 'cv_error_train', 'cv_lmb'],
+                     write_path+'terrain/train_test_task_%s_%s.txt' % (run_mode, save_cv))
+
+    plt.show()
+
+
+    '''
     # Plotting
     save = '%s_patch%d_N%d_Nbs%d_pmax%d_nlambdas%d' % (reg_g, patch, n_terrain, N_bootstraps, p, nlambdas)
 
@@ -687,5 +790,6 @@ if run_mode == 'g':
                             'p=%d, $\lambda$=%.2e, N=%d, $N_{BS}$=%d' % (bs_best[0], bs_best[1], N, N_bootstraps),
                             'p%d_lmb%.2e_n%d_ts%.2f' % (bs_best[0], bs_best[1], N, test_size),
                             fig_path, run_mode, resample='Bootstrap')
-
+    
     plt.show()
+    '''

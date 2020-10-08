@@ -204,88 +204,56 @@ def print_parameters_franke(seed, N, noise, p, scale, test_size):
     return
 
 
-#def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample=None, fs=14):
-def plot_MSE_train_test(polydegree, train_MSE, test_MSE, title_mod, save, fig_path, task, resample=None, fs=14):
+# def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample=None, fs=14):
+def plot_MSE_train_test(polydegree, train_MSE, test_MSE, title_mod, save, fig_path, task,
+                        resample=None, xlim=None, ylim=None, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, train_MSE, label='Train')
     plt.plot(polydegree, test_MSE, label='Test')
     plt.legend()
     plt.xlabel(r'Polynomial degree $p$', fontsize=fs)
     plt.ylabel('Mean squared error', fontsize=fs)
-#    plt.yscale('log')
     plt.grid('on')
-#    plt.tight_layout()
+    plt.xlim(xlim)
+    plt.ylim(ylim)
+
     if resample is not None:
-        plt.title(r'Train test MSE, %s, %s' % (resample, title_mod), fontsize=fs)
-#        plt.title('%s, N = %d, test size = %.2f, noise = %.2f' % (resample, n_a*n_a, test_size, noise), fontsize=fs)
-#        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d_%s.png' % (task, n_a*n_a, resample))
+        plt.title(r'%s, %s' % (resample, title_mod), fontsize=fs)
+        plt.tight_layout()
         plt.savefig(fig_path+'task_%s/MSE_train_test_%s_%s.png' % (task, resample, save))
     else:
-        plt.title(r'Train test MSE, %s' % title_mod, fontsize=fs)
-#        plt.title('N = %d, test size = %.2f, noise = %.2f' % (n_a*n_a, test_size, noise), fontsize=fs)
-#        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
+        plt.title(r'%s' % title_mod, fontsize=fs)
+        plt.tight_layout()
         plt.savefig(fig_path+'task_%s/MSE_train_test_%s.png' % (task, save))
 
 
-def plot_MSE_test_OLS_fit(polydegree, train_MSE, test_MSE, n_a, test_size, noise, OLSmethod, fs=14):
-    fig = plt.figure()
-    plt.plot(polydegree, train_MSE, label='Train')
-    plt.plot(polydegree, test_MSE, label='Test')
-    plt.legend()
-    plt.xlabel('Polynomial degree', fontsize=fs)
-    plt.ylabel('Mean squared error', fontsize=fs)
-    plt.title('MSE for Ordinary Least Squares', fontsize=fs)
-#    plt.yscale('log')
-    plt.grid('on')
-    plt.title('N = %d, test size = %.2f, noise = %.2f, method=%d' % (n_a*n_a, test_size, noise, OLSmethod))
-#    plt.ylim([0, 0.025])
-    plt.ylim([0.0, 0.02])
-    plt.tight_layout()
-    plt.savefig('../figures/MSE_train_test_method%d.png' % OLSmethod)
-
-
-def plot_bias_variance(polydegree, error, bias, variance, title_mod, save, fig_path, task, fs=14):
+def plot_bias_variance(polydegree, error, bias, variance, title_mod, save, fig_path, task, xlim=None, ylim=None, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, error, label='Error')
     plt.plot(polydegree, bias, label='Bias')
     plt.plot(polydegree, variance, label='Variance')
-    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.xlabel(r'Polynomial degree $p$', fontsize=fs)
     plt.ylabel('Mean squared error', fontsize=fs)
     plt.title(r'%s' % title_mod, fontsize=fs)
     plt.grid('on')
     plt.legend()
-    plt.ylim([0.0, 0.02])
-#    plt.yscale('log')
+    plt.xlim(xlim)
+    plt.ylim(ylim)
     plt.tight_layout()
     plt.savefig(fig_path+'task_%s/bias_variance_%s.png' % (task, save))
 
 
-def plot_MSE_SIMPLE(polydegree, train_MSE, test_MSE, n_a, test_size, fs=14):
-    fig = plt.figure()
-    plt.plot(polydegree, train_MSE, label='Train')
-    plt.plot(polydegree, test_MSE, label='Test')
-    plt.xlabel('Polynomial degree', fontsize=fs)
-    plt.ylabel('Mean squared error', fontsize=fs)
-    plt.legend()
-#    plt.yscale('log')
-    plt.grid('on')
-    plt.title('N = %d, test size = %.2f' % (n_a*n_a, test_size))#, noise))
-#        plt.savefig(fig_path+'task_%s/MSE_train_test_n%d.png' % (task, n_a*n_a))
-#    plt.ylim([0, 0.025])
-
-    # TODO: add more sophisticated filename - figure out what variation we need plot wise
-
-
-def plot_confidence_int(beta, conf, method, fig_path, task, fs=14):
+def plot_confidence_int(beta, conf, method, save, fig_path, task, fs=14):
+    # TODO: fix filename
     n = len(beta)
     fig = plt.figure()
     plt.errorbar(range(len(beta)), beta, conf, fmt=".", capsize=3, elinewidth=1, mew=1)
     plt.title(r'Confidence intervals for $\beta$, method=%s' % method, fontsize=fs)
-    plt.xlabel(r'$i$', fontsize=fs)
+    plt.xlabel(r'index $i$', fontsize=fs)
     plt.ylabel(r'$\beta_i$', fontsize=fs)
     plt.grid('on')
     plt.tight_layout()
-    plt.savefig(fig_path + 'task_%s/beta_conf_int_n%d_%s.png' % (task, n, method))
+    plt.savefig(fig_path + 'task_%s/beta_conf_int_%s_%s_beta%d.png' % (task, method, save, n))
 
 
 def plot_multiple_y(x, y, label, title, xlab, ylab, save, fig_path, task, fs=14):
@@ -304,13 +272,13 @@ def plot_multiple_y(x, y, label, title, xlab, ylab, save, fig_path, task, fs=14)
 def plot_degree_lambda(polydegree, lambdas, title, save, fig_path, task, fs=14):
     fig = plt.figure()
     plt.plot(polydegree, lambdas)
-    plt.xlabel('Polynomial degree', fontsize=fs)
+    plt.xlabel(r'Polynomial degree $p$', fontsize=fs)
     plt.ylabel(r'$\lambda$', fontsize=fs)
     plt.title(r'%s' % title, fontsize=fs)
     plt.grid('on')
     plt.yscale('log')
     plt.tight_layout()
-    plt.savefig(fig_path+'task_%s/degree_lambdas_%s.png' % (task, save))
+    plt.savefig(fig_path+'task_%s/degree_lambda_%s.png' % (task, save))
 
 
 def plot_heatmap(x, y, z, zlab, title, save, fig_path, task, fs=14):
@@ -328,9 +296,9 @@ def plot_heatmap(x, y, z, zlab, title, save, fig_path, task, fs=14):
     ax.set_xticklabels(xticks, rotation=90, fontsize=10)
     ax.set_yticklabels(yticks, fontsize=10)
 
-    cbar.ax.set_title(zlab, fontsize=fs)
+    cbar.ax.set_title(zlab)#, fontsize=fs)
     ax.set_xlabel(r'$\lambda$', fontsize=fs)
-    ax.set_ylabel('Polynomial degree', fontsize=fs)
+    ax.set_ylabel(r'Polynomial degree $p$', fontsize=fs)
     ax.set_title(title, fontsize=fs)
     plt.tight_layout()
     plt.savefig(fig_path+'task_%s/heatmap_%s.png' % (task, save))
@@ -349,7 +317,7 @@ def plot_lambda_mse(lambdas, mse, title, save, fig_path, task, fs=14):
     plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
 
 
-def plot_surf(x, y, z, xlab, ylab, zlab, title, save, fig_path, task, zlim=None, fs=14):
+def plot_surf(x, y, z, xlab, ylab, zlab, title, save, fig_path, task, zlim=None, azim=None, fs=14):
     fig = plt.figure()
     ax = fig.gca(projection='3d')
 
@@ -367,11 +335,14 @@ def plot_surf(x, y, z, xlab, ylab, zlab, title, save, fig_path, task, zlim=None,
     ax.zaxis.set_major_locator(LinearLocator(10))
     ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
+    # Rotate
+    ax.view_init(azim=azim)
+
     # Add a color bar which maps values to colors.
     cbar = fig.colorbar(surf, shrink=0.5, aspect=5, ax=ax)
     cbar.ax.set_title(r'%s' % zlab, fontsize=fs)
     plt.tight_layout()
-    plt.savefig(fig_path+'task_%s/lambda_mse_%s.png' % (task, save))
+    plt.savefig(fig_path+'task_%s/surf_%s.png' % (task, save))
 
 
 def plot_terrain(z, title, save, fig_path, task, fs=14):
@@ -384,7 +355,7 @@ def plot_terrain(z, title, save, fig_path, task, fs=14):
     plt.savefig(fig_path+'task_%s/%s.png' % (task, save))
 
 
-def save_to_file(array_list, column_names, filename):
+def save_to_file(array_list, column_names, filename, benchmark=False):
     outfile = open(filename, 'w')
 
     n_cols = len(column_names)
@@ -392,6 +363,8 @@ def save_to_file(array_list, column_names, filename):
     line = 'p '
     for j in range(n_cols):
         line += '%s ' % column_names[j]
+    if benchmark is True:
+        print('\n'+line)
     line += '\n'
     outfile.write(line)
 
@@ -399,6 +372,8 @@ def save_to_file(array_list, column_names, filename):
         line = '%d ' % (i+1)
         for j in range(n_cols):
             line += '%2.4e ' % array_list[j][i]
+        if benchmark is True:
+            print(line)
         line += '\n'
         outfile.write(line)
 

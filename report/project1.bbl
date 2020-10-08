@@ -1,12 +1,13 @@
 \begin{thebibliography}{1}
 
+\bibitem{Franke}
+Richard Franke.
+\newblock A critical comparison of some methods for interpolation of scattered
+  data, 1979.
+
 \bibitem{terrain}
 Earthexplorer.
 \newblock \url{https://earthexplorer.usgs.gov/}.
-
-\bibitem{Github1}
-Github repository, project 1.
-\newblock \url{https://github.com/simennb/fysstk4155-project1}.
 
 \bibitem{Hastie}
 Hastie et~al.
@@ -14,13 +15,12 @@ Hastie et~al.
   and Prediction}.
 \newblock Springer, second edition edition, 2017.
 
-\bibitem{Franke}
-Richard Franke.
-\newblock A critical comparison of some methods for interpolation of scattered
-  data, 1979.
-
 \bibitem{vanwieringen2020lecture}
 Wessel~N. van Wieringen.
 \newblock Lecture notes on ridge regression, 2020.
+
+\bibitem{Github1}
+Github repository, project 1.
+\newblock \url{https://github.com/simennb/fysstk4155-project1}.
 
 \end{thebibliography}

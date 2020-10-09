@@ -1,13 +1,9 @@
 import functions as fun
 import regression_methods as reg
 import resampling_methods as res
-
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge, Lasso
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import make_pipeline
 from sklearn.utils import resample
 import time
 
@@ -16,7 +12,6 @@ def test_bootstrap(fig_path):
     """
     Compares my bootstrap implementation to the example code in lecture notes week 36, slide 29
     Removed the skl.make_pipeline after verifying that the changed version yields the same result.
-    :return:
     """
     np.random.seed(2018)
 
@@ -59,9 +54,6 @@ def test_bootstrap(fig_path):
             beta_ols = np.linalg.inv(X_train.T @ X_train) @ X_train.T @ y_
             y_pred[:, i] = (X_test @ beta_ols)[:, 0]
 
-#        print('N_samples = %.2f , mean(unique) = %.2f' % (np.mean(n_samp), np.mean(tot_unique)))
-#        print('Avg. number of unique in lecture bootstrap: %.2f' % np.mean(tot_unique))
-
         polydegree[degree] = degree
         error[degree] = np.mean( np.mean((y_test - y_pred)**2, axis=1, keepdims=True) )
         bias[degree] = np.mean( (y_test - np.mean(y_pred, axis=1, keepdims=True))**2 )
@@ -91,11 +83,7 @@ def test_bootstrap(fig_path):
         bs_error[degree] = error_
         bs_bias[degree] = bias_
         bs_variance[degree] = var_
-        #        print(bias_OLS, type(bias_OLS))
-        #        print(mean_OLS, var_OLS, bias_OLS)
 
-        # Compare printout
-        #print('Polynomial degree:', degree)
     end_self = time.time()
 
     print('Time elapsed lecture version: %.5f s' % (end_lecture - start_lecture))

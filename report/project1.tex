@@ -1,3 +1,4 @@
+%\documentclass[12pt]{article}
 \documentclass[a4paper]{article}
 \usepackage{amsmath,amsfonts,amssymb}
 \usepackage[utf8]{inputenc}
@@ -140,6 +141,12 @@
 \newcommand{\II}{\textbf{I}}
 \newcommand{\T}{\mathsf{T}}
 
+\newcommand{\Ey}{\mathbb{E}[\bm{\tilde y}]}
+\newcommand{\xx}{\mathbf{x}}
+\newcommand{\ee}{\bm{\epsilon}}
+\newcommand{\yy}{\bm{\tilde y}}
+
+
 % Section labeling
 %\usepackage{titlesec}% http://ctan.org/pkg/titlesec
 %\renewcommand{\thesubsection}{\arabic{subsection}}
@@ -147,20 +154,22 @@
 % Title/name/date
 \title{FYS-STK4155: Project 1}
 \author{Simen Nyhus Bastnes}
-\date{5. October 2020}
+\date{10. October 2020}
 
 \begin{document}
 \maketitle
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-In this project, we will study various methods of linear regression, namely the Ordinary Least Squares method, Ridge, and Lasso regression, as well as investigate resampling the data via Bootstrapping and $k$-fold Cross-Validation. The data we will be looking at is the so-called Franke function, as well as terrain elevation data from a region in Norway. The Franke function gives us a way of testing our implementation before moving on to the more complex terrain data.%The goal of this project is to do linear regression with bootstrapping and cross-validation on the Franke function and real data.
+In this project, we will study various methods of linear regression, namely the Ordinary Least Squares method, Ridge, and Lasso regression, as well as investigate resampling the data via Bootstrapping and $k$-fold Cross-Validation. The data we will be looking at is the so-called Franke function, as well as terrain elevation data from a region south-east in Norway. The Franke function gives us a way of testing our implementation before moving on to the more complex terrain data. For the Franke function, we found that Ridge regression performed the best for both Bootstrap and Cross-validation, when it comes to both accuracy and stability. Cross-validation gave the lowest estimate for the error. For the terrain data, we looked at a single patch from the map, and found that OLS performed a decent bit better than Ridge and Lasso, but since we did not reach the overfitting regime, the results might change if we had used a higher $p_{\text{max}}$.
+
+%The goal of this project is to do linear regression with bootstrapping and cross-validation on the Franke function and real data.
 \end{abstract}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Introduction}
 % not good enough maybe check first sentence
 
-With the emergence of more powerful computers, the field of machine learning is steadily becoming an integral part of both business and many fields of science. While many of the concepts and algorithms used in machine learning today has been known for a long time, some of them have simply been too computationally expensive to do efficiently. While not typically too computationally heavy \red{do something about this}, linear regression is one of the simplest and most-studied forms of machine learning, and provides a good introduction to concepts commonly used in machine learning. 
+With the emergence of more powerful computers, the field of machine learning is steadily becoming an integral part of both business and many fields of science. While many of the concepts and algorithms used in machine learning today has been known for a long time, some of them have simply been too computationally expensive to do efficiently. Linear regression is one of the simplest and most-studied forms of machine learning, and provides a good introduction to concepts commonly used in machine learning. 
 \\\\
 In this project, we will look at three different methods of regression analysis and compare how they fare against each other. The methods we will be using is the Ordinary Least Squares method, Ridge regression, and Lasso regression. We will also see how resampling the data affects the results from the regression methods, by implementing the Bootstrap algorithm and the $k$-fold Cross-Validation.
 \\\\
@@ -239,10 +248,43 @@ Lasso regression is another shrinkage method, with a slightly different optimiza
 \end{align*}
 where $||\beta||_1$ is the $L_{1}$ norm.
 \subsection{Bias-Variance decomposition}
+Starting from the so-called cost function, we want to derive an expression for the variance and bias for the predicted values $\bm{\tilde y}$
 \begin{align*}
 	C(\XX, \beta) &= \frac{1}{n}\sum_{i=0}^{n-1}(y_i-\tilde y_i)^2 = \mathbb{E}[(\bm{y}-\bm{\tilde y})^2]
 \end{align*}
-\subsection{R2????}
+assuming that the true data is generated from a noisy model $\bm{y} = f(\bm{x})+\bm{\epsilon}$ where $\epsilon$ is normally distributed with zero mean and standard deviation $\sigma^2$, we get
+\begin{align*}
+\mathbb{E}[(\bm{y}-\bm{\tilde y})^2] &= \mathbb{E}\Big[(f+\ee - \yy)^2\Big]\\
+\intertext{We add and subtract $\Ey$ to the expression}
+&= \mathbb{E}\Big[(f + \ee - \yy + \Ey - \Ey)^2\Big]\\
+&= \mathbb{E}\Big[(f-\Ey) - (\yy - \Ey) + \ee)^2\Big]\\
+\intertext{Expanding the expression gives us}
+&= \mathbb{E}\Big[(f-\Ey)^2 + (\yy-\Ey)^2 + \ee^2 - 2(f-\Ey)(\yy-\Ey) \\
+&+ 2(f-\Ey)\ee - 2(\yy-\Ey)\ee \Big]\\
+\intertext{We can use that the mean of $\ee$ is zero, thus making the last two terms vanish $\mathbb{E}[\ee] = 0$}
+&= \mathbb{E}\Big[(f-\Ey)^2 + (\yy-\Ey)^2 + \ee^2 - 2(f-\Ey)(\yy-\Ey) \Big]
+\end{align*}
+For this to give the results we want, the last term should also be zero, but I don't see how, and often the derivation is just skipped over, or with confusing notation. Assuming it is zero, we get
+\begin{align*}
+\mathbb{E}[(\bm{y}-\bm{\tilde y})^2] &= \mathbb{E}[(f-\Ey)^2] + \mathbb{E}[(\yy-\Ey)^2] + \mathbb{E}[\ee^2]\\
+\intertext{Using that $\mathbb{E}[\ee^2] = \sigma^2$, we get the final expression for the bias-variance decomposition}
+\mathbb{E}[(\bm{y}-\bm{\tilde y})^2] &= \mathbb{E}[(f-\Ey)^2] + \mathbb{E}[(\yy-\Ey)^2] + \sigma^2\\
+\end{align*}
+Where the left-hand side is the so-called mean squared error (henceforth referred to as MSE), the first term is the bias term, which measures how much the our model $\yy$ differs from the true model $f(\xx)$. The second term is the variance of our model, while the third term is the noise. High bias indicates underfitting, and the model is not complex enough to capture the relevant features, while high variance can indicate that the model is overfitting, and adjusting to the smallest variations in the data set.\\\\
+Thus, our goal in this project is to try to find the middle ground between high bias and high variance, and that will be the point where the MSE is the lowest, and thus it makes a lot of sense to use it as a measure for how good our model is.
+\\\\
+The MSE can be written more explicitly as
+\begin{align*}
+\text{MSE}(\bm{y},\yy) &= \frac{1}{n}\sum_{i=0}^{n-1}(y_i-\tilde y_i)^2 
+\end{align*}
+Another way of assessing the results would be the $R^2$ score
+\begin{align*}
+R^2(\bm{y},\yy) &= 1-\frac{\sum_{i=0}^{n-1}(y_i - \tilde y_i)^2}{\sum_{i=0}^{n-1}(y_i - \bar{\bm{y}})^2}
+\end{align*}
+where
+\begin{align*}
+\bar{\bm{y}} &= \frac{1}{n}\sum_{i=0}^{n-1}y_i
+\end{align*}
 \subsection{Confidence intervals}
 For the OLS and Ridge regression cases, it is possible to derive the variance of $\beta$ (a proper derivation is given in \cite{vanwieringen2020lecture}), and thus the confidence intervals as well. For the OLS method, the variance is given by
 \begin{align*}
@@ -308,16 +350,32 @@ Cross-validation is a resampling method where (in the case of $k$-fold CV) the d
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Implementation} \label{chap:implement}
-\red{maybe put data sets after code?}
 \subsection{Code}
-\red{need to explain how noise is normal distributed}
-1. Write about what has been implemented
-2. Slightly explain structure
-The heart. \cite{Github1}
+All scripts used to generate the results in this project can be found in the Github repository \cite{Github1}. The code can be found in the \texttt{src} folder, while figures can be found in the \texttt{figures} folder. The data files for the terrain map as well as calculated results can be found in \texttt{datafiles}. The \texttt{benchmark} folder contains a data file for each section of the code with information about the parameters used, in order to easier verify that the program works.
+\\\\
+The main program \texttt{main.py} is split into several different run modes, where the specific details of each one is detailed in table \ref{tab:run_modes}. When starting the program, it prompts you to input one of the following arguments (a,b,c,d,e,f,g), where (a-e) relates to the Franke function, and (f,g) to the terrain data.
+\begin{table}[H]
+  \centering
+  \caption{Explanation of each of the different run modes for the main program \texttt{main.py}.}
+  \label{tab:run_modes}
+  \begin{tabular}{c|p{12cm}}
+    \textbf{Run mode} & \textbf{Function}\\\hline
+    a & Performs an OLS regression on the Franke function with a constant degree $p$. Prints out the MSE and $R^2$ score, and plots the variance of the regression coefficients $\beta$\\\hline
+    b & Performs OLS with Bootstrap and CV on the Franke function. Saves to file the error, bias, and variance for each $p$, and plots all relevant plots.\\\hline
+    c & Performs a Cross-validation and compares it to the one in Scikit-learn.\\\hline
+    d & Runs Ridge regression with Bootstrap and CV for a set of $\lambda$ values over a set of $p$ values. Saves the results to file, and plots the results.\\\hline
+    e & Same as c, expect done with Lasso regression\\\hline
+    f & Creates plots of the patch we are looking at for the terrain map\\\hline
+    g & Depending on what is set to the \texttt{reg\_str} variable, performs one of the three regression methods with Bootstrap and CV on the terrain data. Results are saved to file and plotted.
+    \end{tabular}
+\end{table}
+The program first defines common variables needed for all the different parts of the program, and then goes into specific sections of the code relating to either the Franke function or the terrain data in order to initialize the data set that is to be used.
+\\\\
+Then, there is a fairly long function that performs the actual regression over the polynomial degree $p$ and hyperparameter $\lambda$ for all parts excluding \texttt{a} and \texttt{f}. This function performs Bootstrap and CV with the regression method specified by the variable \texttt{reg\_str}, returning a huge amount of arrays with all the results. This function is a result of restructuring in order to minimize the amount of duplicate code (where the regression method used is the major difference), in order to easier find and fix some bugs that were present in the code.
+\\\\
+After that, each run mode has its own section of code to call the regression function, and plots/saves the results.
 
-\red{maybe conclusion? WE REWROTE THE CODE ON ROCK AND ROLL}
-The code as it stands is divided into sections based on the different tasks in the project. A better approach, would probably have been to combine all the regression and resampling into a single code section, and rather have the run modes determining which parameters and regression methods are used and what is plotted. This is essentially how the section for the terrain data currently is operating. This would help a lot with reducing the total amount of code needed, and also making it easier to fix issues since there is only one section of the code that is computing the regression, and not multiple.
-\subsection{Data sets}
+\subsection{Data sets} \label{sec:data_sets}
 In this project, we will be using two different data sets. The first, is the Franke function shown in appendix \ref{app:Franke}. This function is a two-dimensional function that has been widely used for testing implementations for regression and interpolation.
 \\\\
 The second data set is terrain elevation maps taken from \cite{terrain}, and the maps are stored in the GeoTIFF file format, and are from the SRTM Arc-Second Global data set. In the \texttt{datafiles} folder there are three maps, each of one region of Norway, though only one of them, \\\texttt{SRTM\_data\_Norway\_3.tif} is studied in this project. This map is over the south-eastern part of Norway. A plot of the entire map, as well as a more detailed description of the location is given in figure \ref{fig:entiremap} in appendix \ref{app:terrain}.
@@ -366,13 +424,13 @@ Figure \ref{fig:bias_var} shows the bias-variance trade-off for all three method
     \caption{Ridge}
   \end{subfigure}\\
   \begin{subfigure}{0.49\textwidth}
-    \includegraphics[scale=0.45]{../figures/task_e/bias_variance_N529_pmax20_nlamb15_noise0.05_seed4155_Lasso_boot_Nbs264_opt1.png}
+    \includegraphics[scale=0.45]{../figures/task_e/bias_variance_N529_pmax20_nlamb10_noise0.05_seed4155_Lasso_boot_Nbs264_opt1.png}
     \caption{Lasso}
   \end{subfigure}
   \caption{Bias-variance plots for OLS, Ridge, and Lasso regression, where $N=529$, $\sigma = 0.05$ and $N_{\text{bs}} = N/2$. The best-fit hyperparameter for Ridge was found to be $\lambda = 2.98\cdot10^{-5}$, and $\lambda = 3.16\cdot10^{-5}$ for Lasso.}
   \label{fig:bias_var}
 \end{figure}
-Figure \ref{fig:app_Nbs} in appendix \ref{app:Frankeplots} shows how the OLS results depend on the number of bootstraps. Also in the appendix, figure \ref{fig:beta_ridge} shows the 95\% confidence intervals of $\beta$ for Ridge regression, which compared to the OLS confidence intervals shown in figure \ref{fig:confbetaOLS} appear to be slightly larger.\\\\
+Figure \ref{fig:app_Nbs} in appendix \ref{app:Frankeplots} shows how the OLS results depend on the number of bootstraps. The figure also is run with double the amount of data points, showing that the general shape is very similar, though the overfitting starts at slightly higher degree $p$. This is expected, as a with more data points, as there is more complexity in the data set. Also in the appendix, figure \ref{fig:beta_ridge} shows the 95\% confidence intervals of $\beta$ for Ridge regression, which compared to the OLS confidence intervals shown in figure \ref{fig:confbetaOLS} appear to be slightly larger.\\\\
 Before looking closer at the hyperparameters $\lambda$, we look at the results from the $k$-fold Cross-validation. Figure \ref{fig:train_test_franke} shows the difference between the training and test MSE for all regression methods and both Bootstrap and Cross-validation. We see that CV gives very similar results to the Bootstrap, with some discrepancies. For OLS, the test MSE starts shooting up a lot later than for the Bootstrap results. For Ridge, the test MSE lies a lot closer to the training set up until $p=15$, where it starts going slightly up. Finally, Lasso in general is closer to the training MSE.
 \begin{figure}[H]
   \centering
@@ -393,17 +451,17 @@ Before looking closer at the hyperparameters $\lambda$, we look at the results f
     \caption{Ridge - Cross-validation}
   \end{subfigure}\\
   \begin{subfigure}{0.49\textwidth}
-    \includegraphics[scale=0.45]{../figures/task_e/MSE_train_test_Bootstrap_N529_pmax20_nlamb15_noise0.05_seed4155_Lasso_boot_Nbs264_opt1.png}
+    \includegraphics[scale=0.45]{../figures/task_e/MSE_train_test_Bootstrap_N529_pmax20_nlamb10_noise0.05_seed4155_Lasso_boot_Nbs264_opt1.png}
     \caption{Lasso - Bootstrap}
   \end{subfigure}
   \begin{subfigure}{0.49\textwidth}
-    \includegraphics[scale=0.45]{../figures/task_e/MSE_train_test_CV_N529_pmax20_nlamb15_noise0.05_seed4155_Lasso_cv_k5_opt1.png}
+    \includegraphics[scale=0.45]{../figures/task_e/MSE_train_test_CV_N529_pmax20_nlamb10_noise0.05_seed4155_Lasso_cv_k5_opt1.png}
     \caption{Lasso - Cross-validation}
   \end{subfigure}\\  
   \caption{Bias-variance plots for OLS, Ridge, and Lasso regression, where $N=529$, $\sigma = 0.05$ and $N_{\text{bs}} = N/2$. The best-fit hyperparameter for Ridge was found to be $\lambda = 2.98\cdot10^{-5}$, and $\lambda = 3.16\cdot10^{-5}$ for Lasso. The $p$-value on the Ridge + CV panel should have been the $p$-value corresponding to the minimum MSE value, but for some reason it is wrong.}
   \label{fig:train_test_franke}
 \end{figure}
-One way of looking at the hyperparameters would be to look at the heat map from all the values of $p$ and $\lambda$ that we used. Figure \ref{fig:franke_heatmap} shows the MSE heat map for Ridge and Lasso using Bootstrap. Heat maps for the bias, variance, and MSE from CV can be found in the Github repository \cite{Github1}. It is clear that the model prefers lower $\lambda$, though for high model complexity/polynomial degree a slightly higher $\lambda$ is preferred. While for Ridge, a large amount of the $\lambda$s give a good result, for Lasso the MSE almost always increase as $\lambda$ is increased. 
+One way of looking at the hyperparameters would be to look at the heat map from all the values of $p$ and $\lambda$ that we used. Figure \ref{fig:franke_heatmap} shows the MSE heat map for Ridge and Lasso using Bootstrap. Heat maps for the bias, variance, and MSE from CV can be found in the Github repository \cite{Github1}. It is clear that the model prefers lower $\lambda$, though for high model complexity/polynomial degree a slightly higher $\lambda$ is preferred. Ridge has a slightly larger space of parameters that give good results, while the Lasso results start getting worse faster as $\lambda$ is increased.%While for Ridge, a large amount of the $\lambda$s give a good result, for Lasso the MSE almost always increase as $\lambda$ is increased. 
 \begin{figure}[H]
   \centering
   \begin{subfigure}{0.49\textwidth}
@@ -411,14 +469,14 @@ One way of looking at the hyperparameters would be to look at the heat map from 
     \caption{Ridge}
   \end{subfigure}
   \begin{subfigure}{0.49\textwidth}
-    \includegraphics[scale=0.45]{../figures/task_e/heatmap_bs_error_N529_pmax20_nlamb15_noise0.05_seed4155_Lasso_boot_Nbs264.png}
+    \includegraphics[scale=0.45]{../figures/task_e/heatmap_bs_error_N529_pmax20_nlamb10_noise0.05_seed4155_Lasso_boot_Nbs264.png}
     \caption{Lasso}
   \end{subfigure}
-  \caption{Heat maps showing the MSE plotted against polynomial degree $p$ and the hyperparameter $\lambda$ for both Ridge and Lasso, using Bootstrap resampling.}
+  \caption{Heat maps showing the MSE plotted against polynomial degree $p$ and the hyperparameter $\lambda$ for both Ridge and Lasso, using Bootstrap resampling. For Ridge, we calculated the results for 20 log-spaced $\lambda$s between $1\cdot10^{-6}$ and $1\cdot10^{1}$, while for Lasso we calculated 10 values of $\lambda$ between $1\cdot10^{-6}$ and $1\cdot10^{-1}$.}
   \label{fig:franke_heatmap}
 \end{figure}
 Figure \ref{fig:franke_lambdap} shows $\lambda_{\text{min}}$ plotted against $p$ for both Ridge and Lasso where $\lambda_{\text{min}}$ is the $\lambda$ corresponding to the lowest MSE for that polynomial degree. This is done both for Bootstrap and Cross-validation. For Ridge and Bootstrap, the optimal $\lambda$ varies quite a bit for each value of $p$, while for CV, it stays at the lowest value for $p \in [8, 12]$, where there is a peak in the Bootstrap. The axes are slightly different, so plotting them on top of each other would have been interesting.\\\\
-For Lasso, the $\lambda$ value drops down to the lowest value at $p\sim3-4$ for both Bootstrap and CV, staying there until the end. This shows that we probably should have tried running with even lower values. Sadly, running with the same starting point $\lambda = 1\cdot10^{-6}$ as Ridge caused a lot of convergence errors, and took extremely long time without finishing.
+For Lasso, the $\lambda$ value drops down to the lowest value at $p\sim3-4$ for both Bootstrap and CV, staying there until the end. This shows that we probably should have tried running with even lower values. Running with the starting point $\lambda = 1\cdot10^{-6}$ took extremely long time to converge (or just reach the maximum iteration count), so trying with any lower is not very tempting. 
 \begin{figure}[H]
   \centering
   \begin{subfigure}{0.49\textwidth}
@@ -430,47 +488,141 @@ For Lasso, the $\lambda$ value drops down to the lowest value at $p\sim3-4$ for 
     \caption{Ridge - Cross-validation}
   \end{subfigure}\\
   \begin{subfigure}{0.49\textwidth}
-    \includegraphics[scale=0.45]{../figures/task_e/degree_lambda_N529_pmax20_nlamb15_noise0.05_seed4155_Lasso_boot_Nbs264.png}
+    \includegraphics[scale=0.45]{../figures/task_e/degree_lambda_N529_pmax20_nlamb10_noise0.05_seed4155_Lasso_boot_Nbs264.png}
     \caption{Lasso - Bootstrap}
   \end{subfigure}
   \begin{subfigure}{0.49\textwidth}
-    \includegraphics[scale=0.45]{../figures/task_e/degree_lambda_N529_pmax20_nlamb15_noise0.05_seed4155_Lasso_cv_k5.png}
+    \includegraphics[scale=0.45]{../figures/task_e/degree_lambda_N529_pmax20_nlamb10_noise0.05_seed4155_Lasso_cv_k5.png}
     \caption{Lasso - Cross-validation}
   \end{subfigure}
   \caption{Hyperparameter $\lambda$ plotted against polynomial degree $p$ for Ridge/Lasso regression with Bootstrap/Cross-validation. The $\lambda$ value corresponds to the one that gives the lowest MSE value at the given $p$.}
   \label{fig:franke_lambdap}
 \end{figure}
-Finally, table \ref{tab:best_fit_franke} shows the best-fit parameters $p$ and $\lambda$ for each of the three regression methods, and for each of the resampling methods. For both Bootstrap and Cross-validation, Ridge regression seems to be the best option, while Lasso seems to be the worst. Part of the reason why Lasso performs the worst here could be because of the $\lambda$-values not being low enough as explained earlier, causing us to miss the best fit for Lasso. OLS however performs very close to Ridge, especially in the Cross-validation, and it is the fastest regression method, while Lasso can be extremely slow as there is no analytical solution. That said, both Ridge and Lasso have a significant advantage when it comes to stability. As shown with both the bias-variance trade-off and train-test plots, Ridge and Lasso has a much wider range of parameters that give good results, as the hyperparameter suppresses the overfitting problem with OLS.
+Finally, table \ref{tab:best_fit_franke} shows the best-fit parameters $p$ and $\lambda$ for each of the three regression methods, and for each of the resampling methods. For both Bootstrap and Cross-validation, Ridge regression seems to be the best option, with both OLS and Lasso only slightly behind. For the Bootstrap, Lasso performs better than OLS, while for CV, OLS performs better. Looking at the R2 scores could have been useful to see how significant those differences are, but based on the train/test MSE plots in figure \ref{fig:train_test_franke}, the differences are fairly small. Worth noting out is that while Ridge and Lasso are very similar results wise, Ridge is quite a bit faster, as Lasso can be extremely slow since there is no analytical solution. OLS on the other hand is even faster than Ridge, but has a significant disadvantage when it comes to stability. As shown with both the bias-variance trade-off and train-test plots, Ridge and Lasso has a much wider range of parameters that give good results, as the hyperparameter suppresses the overfitting problem with OLS.
 \begin{table}[H]
   \centering
   \caption{The best-fit parameters for OLS, Ridge and Lasso regression given the lowest MSE value. First three columns is the Bootstrap, last three is Cross-validation}
   \label{tab:best_fit_franke}
   \begin{tabular}{c|c|c|c||c|c|c}
     Reg. method & p (BS)& $\lambda$ (BS) & MSE (BS) & p (CV) & $\lambda$ (CV) & MSE (CV) \\\hline
-    OLS & 5 & - & $4.84\cdot10^{-3}$ & 8 & - & $3.30\cdot10^{-03}$\\
+    OLS & 5 & - & $4.84\cdot10^{-3}$ & 8 & - & $3.30\cdot10^{-3}$\\
     Ridge & 8 & $6.95\cdot10^{-5}$ & $4.55\cdot10^{-3}$ & 15 & $5.46\cdot10^{-6}$ & $3.28\cdot10^{-3}$\\
-    Lasso & 13 & $3.16\cdot10^{-5}$ &$5.67\cdot10^{-3}$ & 14 & $3.16\cdot10^{-5}$ & $5.08\cdot10^{-3}$
+    Lasso & 7 & $1.00\cdot10^{-6}$ &$4.59\cdot10^{-3}$ & 19 & $1.00\cdot10^{-6}$ & $3.46\cdot10^{-3}$
     \end{tabular}
 \end{table}
 Before moving on to the terrain data, to point out that for some reason the $p$ and $\lambda$ values present in the title of figure \ref{fig:train_test_franke} for the CV+Ridge panel specifically for some reason is incorrect. Quite a bit of time was spent looking at the code and output files without understanding why that one specifically is wrong.
 \subsection{Terrain data}
-\subsection{Further discussion} \label{sub:discussion}
-\red{maybe refer to how i checked bootstrap compared SKL/OLS, and lecture notes. CV skl vs ols?}
-\red{figure out sectioning}
-Mention bootstrap and how at higher degrees, some samples jst
-The number of outliers, as in where predicted values values are very far from test data gets higher the higher polynomial degree, and causes the bias to shoot up for some reason Despite resampling, it appears to be the same indices that give the fucked up value
-In the $n=1024$, $nbs=2$, $p=15$, $noise=0.05$ case, index 196 has a y\_pred of 19 and 25ish setting it to the value of 195 gives a max value of y\_pred of $1.2$isho why the hell does one row get so incredibly messed up?????
-And why is it extremely wrong in both bootstraps despite having shuffled everything?
-Replacing X\_test$[196]$ with X\_test$[195]$ "removes" the outlier, while just changing y\_test$[196]$ does nothing 
+We look at the terrain map described in chapter \ref{sec:data_sets}. The entire map is $3601\times1801$ data points, so performing the analysis on the entire map is outside of the scope of this project, so instead we will be focusing on a smaller region of the map. Ideally, we would have performed this analysis on many patches of the map, but sadly due to time constraints we will only have the results for this one patch. Altering which area and the size of it is relatively easy in the code, should one desire to test it out.\\\\
+Figure \ref{fig:terrain_patch} shows the zoomed in map and a 3D surface plot of the patch we will be studying in this section. First, we normalize the map by the maximum height in the dataset, and choose a $150\times150$ grid for our region, giving us a data set of size 22500 samples, quite a bit more than we had for the Franke function. The region we chose is located at $(x,y)$ $(880, 2920)$ to $(1030, 3070)$, and the center of the map corresponds roughly to where the author grew up. Beyond that, the area consists of several fairly sharp mountains/hills and decent variation in the features.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.79\textwidth}
+  	\centering
+    \includegraphics[scale=0.60]{../figures/task_f/terrain_n150_880_2920.png}
+    \caption{Terrain}
+  \end{subfigure}\\
+  \begin{subfigure}{0.79\textwidth}
+  	\centering
+    \includegraphics[scale=0.60]{../figures/task_f/surf_surf_terrain_n150_880_2920.png}
+    \caption{3D surface plot}
+  \end{subfigure}
+  \caption{Top: Zoomed in view of the map. Bottom: 3D surface plot of the same region. The region we are studying is located at $(x,y)$ $(880, 2920)$ to $(1030, 3070)$, with $N=22500$ samples.}
+  \label{fig:terrain_patch}
+\end{figure}
+Figure \ref{fig:bias_var_terrain} shows the bias-variance trade-off for all regression methods using Bootstrap. The OLS keeps decreasing as the degree increases, and seems to have a lower error than both Ridge and Lasso for roughly $p>11$. Since we have so many data points, it might be that the OLS does not yet start overfitting, and possibly the noise level of the data is low enough to push this threshold further up. Testing with higher values of $p$ would probably be the way forward, but doing so takes significantly more time, as the number of terms in the design matrix keeps increasing by $p+2$ for every new degree up you go, with 231 terms for $p=20$, 496 for $p=30$, 861 for $p=40$.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/OLS/bias_variance_N22500_patch1_pmax20_nlamb1_OLS_boot_Nbs264_opt1.png}
+    \caption{OLS}
+  \end{subfigure}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Ridge/bias_variance_N22500_patch1_pmax20_nlamb15_Ridge_boot_Nbs264_opt1.png}
+    \caption{Ridge}
+  \end{subfigure}\\
+  \begin{subfigure}{0.49\textwidth}
+%    \includegraphics[scale=0.45]{../figures/task_g/Ridge/%bias_variance_N22500_patch1_pmax20_nlamb15_Ridge_boot_Nbs100_opt1.png}
+    \includegraphics[scale=0.45]{../figures/task_g/Lasso/bias_variance_N22500_patch1_pmax20_nlamb15_Lasso_boot_Nbs264_opt1.png}
+    \caption{Lasso}
+  \end{subfigure}
+  \caption{Bias-variance plots for OLS, Ridge, and Lasso regression, for the terrain patch, $N=22500$, $N_{\text{bs}} = 264$.}%The best-fit hyperparameter for Ridge was found to be $\lambda = 2.98\cdot10^{-5}$, and $\lambda = 3.16\cdot10^{-5}$ for Lasso.}
+  \label{fig:bias_var_terrain}
+\end{figure}
+Figure \ref{fig:mse_testcomp_terrain} shows the direct comparison between the test MSE from Bootstrap and Cross-validation, computed for each of the regression methods. We see that the results are quite close, with Bootstrap giving a slightly lower error for higher $p$-values for Ridge, which contrasts the results for the Franke function where Cross-validation gave a lower test error than Bootstrap, though the difference for the terrain data is much smaller than it was for the Franke function. For OLS and Lasso, Bootstrap has a slightly higher error than CV.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/OLS/test_compare_BS_CV_p20_N22500_patch1_pmax20_nlamb1_OLS_Nbs264_k5_opt1.png}
+    \caption{OLS}
+  \end{subfigure}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Ridge/test_compare_BS_CV_p20_N22500_patch1_pmax20_nlamb15_Ridge_Nbs264_k5_opt1.png}
+    \caption{Ridge}
+  \end{subfigure}\\
+  \begin{subfigure}{0.49\textwidth}
+%    \includegraphics[scale=0.45]{../figures/task_g/Ridge/test_compare_BS_CV_p20_N22500_patch1_pmax20_nlamb15_Ridge_Nbs100_k5_opt1.png}
+    \includegraphics[scale=0.45]{../figures/task_g/Lasso/test_compare_BS_CV_p20_N22500_patch1_pmax20_nlamb15_Lasso_Nbs264_k5_opt1.png}
+    \caption{Lasso}
+  \end{subfigure}
+  \caption{Comparison between the test MSE from Bootstrap and Cross-validation, for each regression method. Data set is the terrain data described earlier, $N=22500$, $N_{\text{bs}} = 264$.}
+  \label{fig:mse_testcomp_terrain}
+\end{figure}
+To study the hyperparameter, we again start by plotting the heat maps for Ridge and Lasso. Figure \ref{fig:terrain_heatmap} shows the MSE heat maps when using Bootstrap. The Cross-validation results can be found in appendix \ref{app:terrainplots}, figure \ref{fig:terrain_heatmap_CV}. We see that the Ridge results shows a smaller dependence on the hyperparameter compared to the Franke function, as even the highest $\lambda$s give decent results. For Lasso, the results are more in line with the Franke function, with a much smaller range of viable $\lambda$ values. Note the difference in the $x$-axis range.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Ridge/heatmap_bs_error_N22500_patch1_pmax20_nlamb15_Ridge_boot_Nbs264.png}
+    \caption{Ridge}
+  \end{subfigure}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Lasso/heatmap_bs_error_N22500_patch1_pmax20_nlamb15_Lasso_boot_Nbs264.png}
+    \caption{Lasso}
+  \end{subfigure}
+  \caption{Heat maps showing the MSE plotted against polynomial degree $p$ and the hyperparameter $\lambda$ for both Ridge and Lasso, using Bootstrap resampling. For Ridge, we calculated the results for 15 log-spaced $\lambda$s between $1\cdot10^{-6}$ and $1\cdot10^{1}$, while for Lasso we calculated 15 values of $\lambda$ between $1\cdot10^{-6}$ and $1\cdot10^{-2}$. $N_{\text{bs}} = 264$.}
+  \label{fig:terrain_heatmap}
+\end{figure}
+
+Figure \ref{fig:terrain_lambdap} shows $\lambda_{\text{min}}$ plotted against $p$ for both Ridge and Lasso where $\lambda_{\text{min}}$ is the $\lambda$ corresponding to the lowest MSE for that polynomial degree. This is done both with both Bootstrap and CV, but only Bootstrap is shown here since they show the same trends. We see that both Ridge and Lasso goes towards the minimum $\lambda$ value and stays there as $p$ is increased. This happens faster for Lasso regression at $p=3$, and $p=7$ for Ridge.
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Ridge/degree_lambda_N22500_patch1_pmax20_nlamb15_Ridge_boot_Nbs264.png}
+    \caption{Ridge - Bootstrap}
+  \end{subfigure}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Lasso/degree_lambda_N22500_patch1_pmax20_nlamb15_Lasso_boot_Nbs264.png}
+    \caption{Lasso - Bootstrap}
+  \end{subfigure}
+  \caption{Hyperparameter $\lambda$ plotted against polynomial degree $p$ for Ridge/Lasso regression with Bootstrap. The $\lambda$ value corresponds to the one that gives the lowest MSE value at the given $p$.}
+  \label{fig:terrain_lambdap}
+\end{figure}
+Finally, we summarize our results for the terrain data in a table. Table \ref{tab:best_fit_terrain} shows the optimal ($p$, $\lambda$) values and the corresponding MSE value for all three regression methods and both resampling methods. Unsurprisingly, all the $p$ values end up being $p=20$, the highest model complexity, which fits what we observed in figure \ref{fig:bias_var_terrain} and figure \ref{fig:mse_testcomp_terrain}. Beyond that, we see that OLS gives the best result for the terrain data by a decent margin. Lasso performs the worst of the bunch, with a similar difference to Ridge as was between OLS and Ridge. We also see that Bootstrap and Cross-validation give very similar results, being much closer to each other compared to earlier with the Franke function.
 \\\\
-Maybe related to RNG and seed?
-WATHa haw results are weird with minimum in files
+It is clear that in order to properly evaluate the regression methods, a higher $p$ value is needed, which sadly is difficult to do time wise. Also, in order to do so, it would probably be a good idea to try to optimize the code in order to speed up some of the loops, and potentially parallelizing some of them. It would also be ideal to try to test out more regions of the map and not just this one, to see if perhaps a region that is more uneven yields different results.
+\begin{table}[H]
+  \centering
+  \caption{The best-fit parameters for OLS, Ridge and Lasso regression for the terrain patch, given the lowest MSE value. First three columns is the Bootstrap, last three is Cross-validation.}
+  \label{tab:best_fit_terrain}
+  \begin{tabular}{c|c|c|c||c|c|c}
+    Reg. method & p (BS)& $\lambda$ (BS) & MSE (BS) & p (CV) & $\lambda$ (CV) & MSE (CV) \\\hline
+    OLS & 20 & - & $1.00\cdot10^{-4}$ & 20 & - & $9.58\cdot10^{-5}$\\
+    Ridge & 20 & $1.00\cdot10^{-6}$ & $2.64\cdot10^{-4}$ & 20 & $1.00\cdot10^{-6}$ & $2.70\cdot10^{-4}$\\
+    Lasso & 20 & $1.00\cdot10^{-6}$ &$4.18\cdot10^{-4}$ & 20 & $1.00\cdot10^{-6}$ & $4.11\cdot10^{-4}$
+    \end{tabular}
+\end{table}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Conclusion} \label{chap:conclusion}
-Introduce why we set out, then explain results
-
-no idea why problems are, but the way the code is structured, sadly makes debugging slow.
+In this project, we set out to investigate how different methods of linear regression performs on the Franke function, as well as terrain elevation data. To assess our models, we employed Bootstrap and Cross-validation as resampling methods.
+\\\\
+For the Franke function, we found that all three methods, OLS, Ridge and Lasso performed very similarly, giving errors on the scale $10^{-3}$ for the best-fit model. Ridge was however the best model, both in accuracy and stability. Lasso yielded almost as good results as Ridge, but was significantly slower as it has no analytical solution. Cross-validation gave the lowest errors, with roughly 30\% improvement over Bootstrapping for the best-fit models.
+%Introduce why we set out, then explain results
+\\\\
+For the terrain data, we found that the OLS performed the best, with Ridge being a decent bit behind, and Lasso roughly as much behind Ridge. The best fit for OLS was at $p=20$, which gave an MSE of $9.58\cdot10^{-5}$. In this case, Cross-validation was only marginally better for OLS and Lasso regression, and slightly worse for Ridge, but the difference is minor. As all the best fits was the highest $p$-value we tested, testing higher polynomial degrees would be necessary.
+\\\\
+For future work, looking closer at the terrain data would probably be a good idea. Ideally, more parts of the maps should be checked instead of just one small patch, in order to see how more complex and noisy regions affect the results, as well as increasing the degrees that are tested (and the hyperparameter $\lambda$). This however would take significantly more time, especially for Lasso, so looking into parallelizing the analysis would be relevant. Since all $p$ and $\lambda$ computations are independent, doing so should not be too difficult.
+%\red{middle?} For future work, it would have been worth parallelizing parts of the code. Could be either the polynomial degrees, the hyperparameters, or both the Bootstrap and Cross-validation parts of the code, as none of them directly depend on each other. The Lasso in scikit-learn however has the possibility to use previous results, so would need to check out where it is optimal for Lasso. CUDA cores
+%For terrain, OLS performed well, but to say definite probalby would have needed to test more varied regions (and more at all)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \bibliography{references}
@@ -493,12 +645,12 @@ where $x,y \in [0, 1]$.
 \subsection{Terrain data} \label{app:terrain}
 \begin{figure}[H]
 	\centering
-	\includegraphics[scale=0.8]{../figures/task_f/entire_map.png}
+	\includegraphics[scale=0.91]{../figures/task_f/entire_map.png}
 	\caption{Plot of the entire terrain map in \texttt{SRTM\_data\_Norway\_3.tif}. Map is over a region south-east in Norway (Vestfold og Telemark, Viken). Coordinates $(x,y) = (1100, 3000)$ correspond to the location of the city Skien.}
 	\label{fig:entiremap}
 \end{figure}
 
-\section{Testing and verifying methods} \label{app:testing}
+%\section{Testing and verifying methods} \label{app:testing}
 
 \section{Franke function plots} \label{app:Frankeplots}
 \begin{figure}[H]
@@ -531,5 +683,18 @@ where $x,y \in [0, 1]$.
 \end{figure}
 \section{Terrain data plots} \label{app:terrainplots}
 %\subsubsection{Hyperpar
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Ridge/heatmap_cv_error_N22500_patch1_pmax20_nlamb15_Ridge_cv_k5.png}
+    \caption{Ridge}
+  \end{subfigure}
+  \begin{subfigure}{0.49\textwidth}
+    \includegraphics[scale=0.45]{../figures/task_g/Lasso/heatmap_cv_error_N22500_patch1_pmax20_nlamb15_Lasso_cv_k5.png}
+    \caption{Lasso}
+  \end{subfigure}
+  \caption{Heat maps showing the MSE plotted against polynomial degree $p$ and the hyperparameter $\lambda$ for both Ridge and Lasso, using Cross-validation. For Ridge, we calculated the results for 15 log-spaced $\lambda$s between $1\cdot10^{-6}$ and $1\cdot10^{1}$, while for Lasso we calculated 15 values of $\lambda$ between $1\cdot10^{-6}$ and $1\cdot10^{-2}$. Plots are almost identical to the Bootstrap version found in figure \ref{fig:terrain_heatmap}.}
+  \label{fig:terrain_heatmap_CV}
+\end{figure}
 
 \end{document}

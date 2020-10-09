@@ -1,13 +1,10 @@
-import os
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
-from sklearn.preprocessing import StandardScaler
 from imageio import imread
 import time
-from numba import jit
 
 
 ###########################################################
@@ -28,11 +25,6 @@ def timeit(method):
 
 
 def franke_function(x, y):
-    """
-    :param x:
-    :param y:
-    :return:
-    """
     term1 = 0.75*np.exp(-0.25*(9*x-2)**2 - 0.25*((9*y-2)**2))
     term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
     term3 = 0.5*np.exp(-0.25*(9*x-7)**2 - 0.25*((9*y-3)**2))
@@ -51,15 +43,16 @@ def calculate_R2(y_data, y_model):
 
 def generate_polynomial(x, y, p):
     """
+    Generates the design matrix X given input arrays x, y and degree p
     :param x:
     :param y:
     :param p:
-    :return:
+    :return: array / polynomial on form [1, x, y, x^2, y^2, ...]
     """
     l = polynom_N_terms(p)  # Number of terms in combined polynomial
     X = np.ones((len(x), l))
 
-    j = 0  # Verified that yields correct results
+    j = 0
     for i in range(1, p + 1):
         j = j + i - 1
         for k in range(i + 1):
@@ -107,14 +100,9 @@ def split_data(X, y, test_size=0.25):
 
 def scale_X(X, scale=None):
     """
-    Function for scaling X by subtracting the mean.
+    Function for scaling X by subtracting the mean and dividing by std.
     Alternative to the skl StandardScaler to make sure intercept row is not set to 0
-    :param X:
-    :param scale:
-    :return:
     """
-    # TODO: check if scaling for test should be done with mean computed from train
-#    print(X[0:5, 3])
     if scale is None:
         scale = [True, False]
 
@@ -142,21 +130,6 @@ def invert_SVD(X):
     return V @ np.diag(inv_sigma) @ U.T
 
 
-# TODO: remove, from mortens code
-def SVDinv(A):
-    ''' Takes as input a numpy matrix A and returns inv(A) based on singular value decomposition (SVD).
-    SVD is numerically more stable than the inversion algorithms provided by
-    numpy and scipy.linalg at the cost of being slower.
-    '''
-    U, s, VT = np.linalg.svd(A)
-
-    D = np.zeros((len(U),len(VT)))
-    for i in range(0,len(VT)):
-        D[i,i]=s[i]
-    UT = np.transpose(U); V = np.transpose(VT); invD = np.linalg.inv(D)
-    return np.matmul(V,np.matmul(invD,UT))
-
-
 def read_terrain(filename, N, loc_start, norm=True):
     # Load the terrain
     terrain = imread(filename)
@@ -180,13 +153,6 @@ def read_terrain(filename, N, loc_start, norm=True):
 
 
 def print_MSE_R2(y_data, y_model, data_str, method):
-    """
-    :param y_data:
-    :param y_model:
-    :param data_str: 'train', 'test'
-    :param method: 'OLS', 'RIDGE'
-    :return:
-    """
     MSE = mean_squared_error(y_data, y_model)
     R2 = calculate_R2(y_data, y_model)
 
@@ -204,7 +170,6 @@ def print_parameters_franke(seed, N, noise, p, scale, test_size):
     return
 
 
-# def plot_MSE_train_test(polydegree, train_MSE, test_MSE, n_a, test_size, noise, fig_path, task, resample=None, fs=14):
 def plot_MSE_train_test(polydegree, train_MSE, test_MSE, title_mod, save, fig_path, task,
                         resample=None, xlim=None, ylim=None, fs=14):
     fig = plt.figure()
@@ -244,7 +209,6 @@ def plot_bias_variance(polydegree, error, bias, variance, title_mod, save, fig_p
 
 
 def plot_confidence_int(beta, conf, method, save, fig_path, task, fs=14):
-    # TODO: fix filename
     n = len(beta)
     fig = plt.figure()
     plt.errorbar(range(len(beta)), beta, conf, fmt=".", capsize=3, elinewidth=1, mew=1)
@@ -302,7 +266,6 @@ def plot_heatmap(x, y, z, zlab, title, save, fig_path, task, fs=14):
     ax.set_title(title, fontsize=fs)
     plt.tight_layout()
     plt.savefig(fig_path+'task_%s/heatmap_%s.png' % (task, save))
-    # TODO: better filename
 
 
 def plot_lambda_mse(lambdas, mse, title, save, fig_path, task, fs=14):
@@ -382,7 +345,7 @@ def save_to_file(array_list, column_names, filename, benchmark=False):
 
 
 if __name__ == '__main__':
-    # TODO: make it plot the franke function?
+    # Plots the entire terrain map
     terrain_data = '../datafiles/SRTM_data_Norway_3.tif'
     terrain = imread(terrain_data)
     plot_terrain(terrain, 'Terrain over Norway 3', 'entire_map', '../figures/', 'f', fs=10)

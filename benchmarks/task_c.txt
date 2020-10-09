@@ -1,0 +1,35 @@
+Input which part of the program to run:
+Franke function: a/b/c/d/e
+Terrain data: f/g
+Run mode: Franke Function:
+Seed =  4155 
+N = 529 
+noise = 0.0500 
+p = 5 
+scale = [True, False] 
+test_size = 0.20
+p =  1, np =   3
+K-fold cross-validation:
+K=5, MSE = 0.02242
+K-fold cross-validation SKL:
+K=5, MSE = 0.02266
+p =  2, np =   6
+K-fold cross-validation:
+K=5, MSE = 0.01486
+K-fold cross-validation SKL:
+K=5, MSE = 0.01490
+p =  3, np =  10
+K-fold cross-validation:
+K=5, MSE = 0.00914
+K-fold cross-validation SKL:
+K=5, MSE = 0.00883
+p =  4, np =  15
+K-fold cross-validation:
+K=5, MSE = 0.00556
+K-fold cross-validation SKL:
+K=5, MSE = 0.00568
+p =  5, np =  21
+K-fold cross-validation:
+K=5, MSE = 0.00384
+K-fold cross-validation SKL:
+K=5, MSE = 0.00386

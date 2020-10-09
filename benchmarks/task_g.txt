@@ -1,0 +1,29 @@
+Input which part of the program to run:
+Franke function: a/b/c/d/e
+Terrain data: f/g
+Run mode: Terrain datafile: SRTM_data_Norway_3.tif
+Patch location: [x, y] start =  [880, 2920]  end =  [1030, 3070]
+p =  1, np =   3
+i = 0, lmb= 1.000e-04
+p =  2, np =   6
+i = 0, lmb= 1.000e-04
+p =  3, np =  10
+i = 0, lmb= 1.000e-04
+p =  4, np =  15
+i = 0, lmb= 1.000e-04
+p =  5, np =  21
+i = 0, lmb= 1.000e-04
+
+p bs_error_test bs_bias bs_var bs_lmb 
+1 1.3333e-03 1.3330e-03 2.2171e-07 1.0000e-03 
+2 6.2061e-04 6.2040e-04 2.0691e-07 1.0000e-02 
+3 5.3260e-04 5.3234e-04 2.5816e-07 1.0000e-01 
+4 5.2090e-04 5.2050e-04 4.0108e-07 1.0000e-03 
+5 4.8377e-04 4.8329e-04 4.7915e-07 1.0000e-04 
+
+p cv_error_test cv_error_train cv_lmb 
+1 1.3132e-03 1.3127e-03 1.0000e-03 
+2 6.1375e-04 6.1348e-04 1.0000e-04 
+3 5.2662e-04 5.2608e-04 1.0000e-03 
+4 5.1224e-04 5.1161e-04 1.0000e+00 
+5 4.7858e-04 4.7776e-04 1.0000e+00 

@@ -1,2 +1,2 @@
-# fysstk4155-project1
-Repository for project 1 in FYS-STK4155 - Applied Data Analysis and Machine Learning
+# FYS-STK4155: Project 1
+Investigating the effects of different regression and resampling methods on the Franke function and terrain data.

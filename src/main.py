@@ -40,8 +40,6 @@ reg_str = 'OLS'
 #reg_str = 'Ridge'
 #reg_str = 'Lasso'
 
-method = 5  # OLS method (check regression_methods.py)
-
 # Benchmark settings
 benchmark = False  # setting to True will adjust all relevant settings for all task
 if benchmark is True:
@@ -56,7 +54,7 @@ if data == 'franke':
     np.random.seed(seed)
     n_franke = 23  # 529 points
     N = n_franke**2  # Total number of samples n*2
-    noise = 0.05  # 2
+    noise = 0.05  # noise level
 
     if benchmark is True:
         n_franke = 23
@@ -122,7 +120,7 @@ if data == 'terrain':
 ########################################################################################################################
 #@fun.timeit
 @ignore_warnings(category=ConvergenceWarning)
-def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, scale, method=5, max_iter=50000):
+def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, scale, max_iter=50000):
     """
     Runs the selected regression methods for the input design matrix, p's, lambdas, and using
     the resampling methods as specified.
@@ -140,10 +138,12 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
     :param K: int, number of folds in the Cross-Validation
     :param test_size: float, size of the test partition [0.0, 1.0]
     :param scale: list determining if the scaling is only by the mean, the std or both [bool(mean), bool(std)]
+    :param max_iter: maximum number of iterations for Lasso
     :return: a lot of arrays with the various results and different ways of representing the data
     """
     nlambdas = len(lambdas)  # number of lambdas
     p = polydegree[-1]  # the maximum p-value
+    method = 4  # OLS method
 
     # Splitting into train and test, scaling the data
     X_train, X_test, z_train, z_test = fun.split_data(X, z, test_size=test_size)
@@ -320,7 +320,7 @@ if run_mode == 'b':
 
     # Performing the regression
     polydegree = np.arange(1, p + 1)
-    variables = run_regression(X, z_ravel, reg_str, polydegree, lambdas, N_bootstraps, K, test_size, scale, method)
+    variables = run_regression(X, z_ravel, reg_str, polydegree, lambdas, N_bootstraps, K, test_size, scale)
     # Unpacking variables
     bs_error_train, bs_error_test = variables[0:2]
     bs_bias, bs_var = variables[2:4]

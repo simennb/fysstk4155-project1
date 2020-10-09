@@ -70,7 +70,7 @@ def polynom_N_terms(p):
     return np.sum(np.arange(p+2))
 
 
-def split_data(X, y, test_size=0.25):
+def split_data(X, y, test_size=0.2):
     """
     :param X:
     :param y:
@@ -79,9 +79,6 @@ def split_data(X, y, test_size=0.25):
     """
     N = len(y)
     i_split = int((1-test_size)*N)
-
-#    X_train = np.zeros((i_split, X.shape[1]))
-#    X_test = np.zeros((N-i_split, X_shape[1]))
 
     index = np.arange(N)
     np.random.shuffle(index)

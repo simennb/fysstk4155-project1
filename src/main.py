@@ -22,7 +22,8 @@ data = 'franke' if run_mode in ['a', 'b', 'c', 'd', 'e'] else None
 data = 'terrain' if run_mode in ['f', 'g'] else data
 
 # Common variables for both parts for easy adjusting
-# Most of the parameters that can be adjusted will be inside the if-test corresponding to the data or task
+# Parameters for N points, noise will be inside if-test corresponding to the data set ('franke' or 'terrain')
+# Parameters for N_bs, K, nlambda, etc. will be inside the if-test corresponding to the task
 p_dict = {'a': 6, 'b': 20, 'c': 20, 'd': 20,
           'e': 20, 'f': 1, 'g': 20}
 scale_dict = {'a': [True, False], 'b': [True, False], 'c': [True, False], 'd': [True, False],
@@ -87,16 +88,12 @@ if data == 'franke':
 if data == 'terrain':
     terrain_data = 'SRTM_data_Norway_3.tif'
     # (3601, 1801) dimensions of image
-    # Maybe make a size_x, size_y
-    # [start_x, start_y, size]
+    # define each patch by [start_x, start_y, size], so only quadratic regions as is
     patches = {1: [880, 2920, 150]}
     patch = 1
 
     n_terrain = patches[patch][2]
     N = n_terrain**2
-
-#    loc_s = [1550, 0]  # pretty interesting shape
-#    loc_s = [880, 2920]  # where i grew up (in _3 map) (n_terrain = 150)
 
     loc_s = patches[patch][0:2]
     loc_e = [loc_s[0] + n_terrain, loc_s[1] + n_terrain]
@@ -128,7 +125,6 @@ def run_regression(X, z, reg_string, polydegree, lambdas, N_bs, K, test_size, sc
     because a rather late attempt at restructuring the code in order to reduce the amount of duplicate
     lines of code regarding regression, that had just escalated out of control, making it extremely
     difficult to debug and finding whatever was causing all the issues.
-    Turns out the real error was all the friends we made along the way.
     :param X: (N, p) array containing input design matrix
     :param z: (N, 1) array containing data points
     :param reg_string: string containing the name of the regression method to be used
@@ -372,7 +368,7 @@ if run_mode == 'c':
     error_test_SKL = np.zeros(len(polydegree))
 
     X_scaled = fun.scale_X(X, scale)
-    OLS = reg.OrdinaryLeastSquares(method)
+    OLS = reg.OrdinaryLeastSquares()
     for degree in range(1, p + 1):
         n_poly = fun.polynom_N_terms(degree)
         print('p = %2d, np = %3d' % (degree, n_poly))
@@ -562,7 +558,6 @@ if run_mode == 'e':
     cv_error_train, cv_error_test = variables[9:11]
     cv_error_train_opt, cv_error_test_opt, cv_lmb_opt = variables[11:14]
     bs_min, bs_best, cv_min, cv_best = variables[14:18]
-    # way too many
 
     # Plotting
 
@@ -678,7 +673,6 @@ if run_mode == 'g':
     cv_error_train, cv_error_test = variables[9:11]
     cv_error_train_opt, cv_error_test_opt, cv_lmb_opt = variables[11:14]
     bs_min, bs_best, cv_min, cv_best = variables[14:18]
-    # way too many
 
     # Parameters for easier saving to file
     run_mode += '/%s' % reg_str
@@ -739,7 +733,7 @@ if run_mode == 'g':
                         'test_compare_BS_CV_p%d_%s_opt%d' % (p, save_bc, i), fig_path, run_mode)
 
     # Write bootstrap to file
-    run_mode = 'task_g'  # spaghetti code
+    run_mode = 'g'
     fun.save_to_file([bs_error_test_opt[:, 0], bs_bias_opt[:, 0], bs_var_opt[:, 0], bs_lmb_opt],
                      ['bs_error_test', 'bs_bias', 'bs_var', 'bs_lmb'],
                      write_path+'terrain/bias_var_task_%s_%s.txt' % (run_mode, save_bs), benchmark)

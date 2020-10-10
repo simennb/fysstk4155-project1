@@ -72,10 +72,10 @@ def polynom_N_terms(p):
 
 def split_data(X, y, test_size=0.2):
     """
-    :param X:
-    :param y:
-    :param test_size:
-    :return:
+    :param X: input design matrix
+    :param y: input data array
+    :param test_size: float, size of test partition
+    :return: X_train, X_test, y_train, y_test
     """
     N = len(y)
     i_split = int((1-test_size)*N)
